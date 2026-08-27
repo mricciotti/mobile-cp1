@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>465066727567-jtm1r9ekfkof7a1iehisrf18d51ibrlt.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.465066727567-jtm1r9ekfkof7a1iehisrf18d51ibrlt</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDvBv1EsuqhcHAmwADO3ftmlJGXCyJcppA</string>
+	<key>GCM_SENDER_ID</key>
+	<string>465066727567</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.mobilecp1.chat</string>
+	<key>PROJECT_ID</key>
+	<string>mobile-17db8</string>
+	<key>STORAGE_BUCKET</key>
+	<string>mobile-17db8.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:465066727567:ios:48bc97e263ca40c3c038fa</string>
+	<key>DATABASE_URL</key>
+	<string>https://mobile-17db8-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>
