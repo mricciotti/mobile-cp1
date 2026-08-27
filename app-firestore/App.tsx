@@ -1,52 +1,50 @@
-import { useEffect, useState, } from "react";
-import { ActivityIndicator, StyleSheet, View, } from "react-native";
-import { SafeAreaProvider, } from "react-native-safe-area-context";
-import { onAuthStateChanged, User, } from "firebase/auth";
-import { auth, } from "./src/config/firebase";
-import { AuthScreen, } from "./src/screens/AuthScreen";
-import { HomeScreen, } from "./src/screens/HomeScreen";
+import { useEffect, useState } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthContextProvider } from "./src/contexts/AuthContext";
+import { useAuth } from "./src/hooks/useAuth";
+import { Loading } from "./src/components/Loading";
+import { LoginScreen } from "./src/screens/LoginScreen";
+import { UsersScreen } from "./src/screens/UsersScreen";
+import { ChatScreen } from "./src/screens/ChatScreen";
+import { ChatUser } from "./src/types/User";
 
-export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+function AppNavigator() {
+    const { user, loading } = useAuth();
+    const [activeContact, setActiveContact] = useState<ChatUser | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth,
-      (firebaseUser) => {
-        setUser(
-          firebaseUser
+    useEffect(() => {
+        if (!user) {
+            setActiveContact(null);
+        }
+    }, [user]);
+
+    if (loading) {
+        return <Loading />;
+    }
+
+    if (!user) {
+        return <LoginScreen />;
+    }
+
+    if (activeContact) {
+        return (
+            <ChatScreen
+                currentUser={user}
+                otherUser={activeContact}
+                onBack={() => setActiveContact(null)}
+            />
         );
-        setLoading(false);
-      }
-    );
-    return unsubscribe;
-  }, []);
+    }
 
-  if (loading) {
-    return (
-      <SafeAreaProvider>
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" />
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
-  return (
-    <SafeAreaProvider>
-      {user ? (<HomeScreen />) : (<AuthScreen />)}
-    </SafeAreaProvider>
-  );
+    return <UsersScreen onSelectContact={setActiveContact} />;
 }
 
-const styles =
-  StyleSheet.create({
-    loading: {
-      flex: 1,
-      justifyContent:
-        "center",
-      alignItems:
-        "center",
-    },
-
-  });
+export default function App() {
+    return (
+        <SafeAreaProvider>
+            <AuthContextProvider>
+                <AppNavigator />
+            </AuthContextProvider>
+        </SafeAreaProvider>
+    );
+}

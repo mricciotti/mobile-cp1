@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "conversations": {
+      "$conversationId": {
+        ".read": "auth != null && (data.child('participants').child('0').val() === auth.uid || data.child('participants').child('1').val() === auth.uid)",
+        ".write": "auth != null && (newData.child('participants').child('0').val() === auth.uid || newData.child('participants').child('1').val() === auth.uid)"
+      }
+    },
+    "messages": {
+      "$conversationId": {
+        ".read": "auth != null && (root.child('conversations').child($conversationId).child('participants').child('0').val() === auth.uid || root.child('conversations').child($conversationId).child('participants').child('1').val() === auth.uid)",
+        ".write": "auth != null && (root.child('conversations').child($conversationId).child('participants').child('0').val() === auth.uid || root.child('conversations').child($conversationId).child('participants').child('1').val() === auth.uid)",
+        "$messageId": {
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'text', 'createdAt']) && newData.child('senderId').val() === auth.uid"
+        }
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}

@@ -23,6 +23,10 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# Firebase native config (baixados do console do Firebase, específicos de cada dev)
+google-services.json
+GoogleService-Info.plist
+
 # TypeScript and test caches
 *.tsbuildinfo
 coverage/

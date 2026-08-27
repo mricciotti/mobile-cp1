@@ -1,152 +1,61 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, serverTimestamp, startAfter, updateDoc, where, } from "firebase/firestore";
-import { db } from "../config/firebase";
-import { User } from "../types/User";
+import { get, off, onValue, ref, set } from "firebase/database";
+import { database } from "../config/firebase";
+import { AuthProvider, ChatUser } from "../types/User";
+import { canChatWith } from "../utils/chatRules";
 
-const COLLECTION_NAME = "users";
+const USERS_PATH = "users";
 
-// CREATE
-export async function createUser(user: User) {
-    const docRef = await addDoc(
-        collection(db, COLLECTION_NAME),
-        {
-            name: user.name,
-            email: user.email,
-            createdAt: serverTimestamp(),
-        }
-    );
-
-    return docRef.id;
+interface UserRecord {
+    name: string;
+    email: string | null;
+    provider: AuthProvider;
 }
 
-
-// READ
-export async function getUsers(): Promise<User[]> {
-    const snapshot =
-        await getDocs(
-            collection(db, COLLECTION_NAME)
-        );
-
-    return snapshot.docs.map(
-        (document) => ({
-            id: document.id,
-            name: document.data().name,
-            email: document.data().email,
-        })
-    );
-}
-
-
-// UPDATE
-export async function updateUser(id: string, user: Partial<User>) {
-    const userRef = doc(db, COLLECTION_NAME, id);
-
-    await updateDoc(
-        userRef,
-        {
-            ...user,
-            updatedAt: serverTimestamp(),
-        }
-    );
-}
-
-
-// DELETE
-export async function deleteUser(id: string) {
-    const userRef = doc(db, COLLECTION_NAME, id);
-    await deleteDoc(userRef);
-}
-
-
-// QUERY + WHERE
-export async function findUsersByEmail(email: string): Promise<User[]> {
-
-    const q = query(
-        collection(db, COLLECTION_NAME),
-        where("email", "==", email)
-    );
-
-    const snapshot = await getDocs(q);
-
-    return snapshot.docs.map(
-        (document) => ({
-            id: document.id,
-            name: document.data().name,
-            email: document.data().email,
-        })
-    );
-}
-
-
-// ORDER BY
-export async function getUsersOrdered(): Promise<User[]> {
-
-    const q = query(
-        collection(db, COLLECTION_NAME),
-        orderBy("name", "asc")
-    );
-
-    const snapshot = await getDocs(q);
-
-    return snapshot.docs.map(
-        (document) => ({
-            id: document.id,
-            name: document.data().name,
-            email: document.data().email,
-        })
-    );
-}
-
-
-// PAGINAÇÃO
-export interface PaginatedUsers {
-    users: User[];
-    lastDocument: | QueryDocumentSnapshot | null;
-    hasMore: boolean;
-}
-
-export async function getUsersPaginated(pageSize: number = 10, lastDocument?: QueryDocumentSnapshot): Promise<PaginatedUsers> {
-
-    const usersRef = collection(db, COLLECTION_NAME);
-
-    const q = lastDocument ? query(usersRef, orderBy("name"), startAfter(lastDocument), limit(pageSize))
-        : query(usersRef, orderBy("name"), limit(pageSize));
-
-    const snapshot = await getDocs(q);
-
-    const users =
-        snapshot.docs.map(
-            (document) => ({
-                id: document.id,
-                name: document.data().name,
-                email: document.data().email,
-            })
-        );
-
-    const lastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
-
+function toChatUser(uid: string, record: UserRecord): ChatUser {
     return {
-        users,
-        lastDocument: lastVisible,
-        hasMore: snapshot.docs.length === pageSize,
+        uid,
+        name: record.name,
+        email: record.email ?? null,
+        provider: record.provider,
     };
 }
 
+export async function saveUserProfile(user: ChatUser): Promise<void> {
+    await set(ref(database, `${USERS_PATH}/${user.uid}`), {
+        name: user.name,
+        email: user.email,
+        provider: user.provider,
+    });
+}
 
-// REAL TIME
-export function subscribeToUsers(callback: (users: User[]) => void) {
-    const q = query(collection(db, COLLECTION_NAME), orderBy("name"));
-    return onSnapshot(q,
-        (snapshot) => {
-            const users =
-                snapshot.docs.map(
-                    (document) => ({
-                        id: document.id,
-                        name: document.data().name,
-                        email: document.data().email,
-                    })
-                );
+export async function getUserProfile(uid: string): Promise<ChatUser | null> {
+    const snapshot = await get(ref(database, `${USERS_PATH}/${uid}`));
 
-            callback(users);
+    if (!snapshot.exists()) {
+        return null;
+    }
+
+    return toChatUser(uid, snapshot.val() as UserRecord);
+}
+
+export function subscribeToContacts(currentUser: ChatUser, callback: (contacts: ChatUser[]) => void): () => void {
+    const usersRef = ref(database, USERS_PATH);
+
+    const listener = onValue(usersRef, (snapshot) => {
+        const data = snapshot.val() as Record<string, UserRecord> | null;
+
+        if (!data) {
+            callback([]);
+            return;
         }
-    );
+
+        const contacts = Object.entries(data)
+            .filter(([uid]) => uid !== currentUser.uid)
+            .map(([uid, record]) => toChatUser(uid, record))
+            .filter((candidate) => canChatWith(currentUser.provider, candidate.provider));
+
+        callback(contacts);
+    });
+
+    return () => off(usersRef, "value", listener);
 }
