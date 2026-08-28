@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { AuthContextProvider } from "./src/contexts/AuthContext";
 import { useAuth } from "./src/hooks/useAuth";
 import { Loading } from "./src/components/Loading";
@@ -42,6 +43,7 @@ function AppNavigator() {
 export default function App() {
     return (
         <SafeAreaProvider>
+            <StatusBar style="light" />
             <AuthContextProvider>
                 <AppNavigator />
             </AuthContextProvider>

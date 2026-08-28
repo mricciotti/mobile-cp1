@@ -8,7 +8,7 @@
     },
     "conversations": {
       "$conversationId": {
-        ".read": "auth != null && (data.child('participants').child('0').val() === auth.uid || data.child('participants').child('1').val() === auth.uid)",
+        ".read": "auth != null && (!data.exists() || data.child('participants').child('0').val() === auth.uid || data.child('participants').child('1').val() === auth.uid)",
         ".write": "auth != null && (newData.child('participants').child('0').val() === auth.uid || newData.child('participants').child('1').val() === auth.uid)"
       }
     },

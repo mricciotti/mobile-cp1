@@ -6,11 +6,11 @@ tempo real via Firebase Realtime Database.
 
 ## Integrantes
 
-> ⚠️ **Preencher antes da entrega.** Sem nome completo e RM de todos os
-> integrantes aqui, o trabalho recebe nota ZERO.
-
-- RM00000 - Nome Completo do Integrante 1
-- RM00000 - Nome Completo do Integrante 2
+- RM554673 - Fernanda Rocha Menon
+- RM556237 - Luiza Macena Dantas
+- RM558537 - Luan Ramos Garcia de Souza
+- RM556930 - Matheus Ricciotti
+- RM555189 - Matheus Bortolotto
 
 ## Tecnologias utilizadas
 

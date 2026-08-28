@@ -1,10 +1,25 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FirebaseError } from "firebase/app";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { loginWithApple, loginWithEmail, loginWithGoogle, registerWithEmail } from "../services/authService";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { Button } from "../components/Button";
+import { TextField } from "../components/TextField";
+import { SocialButton } from "../components/SocialButton";
+import { AppleMark, GoogleMark } from "../components/BrandMarks";
+import { colors, radius, spacing } from "../theme/theme";
 
 type Mode = "login" | "register";
 
@@ -16,6 +31,8 @@ export function LoginScreen() {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [appleAvailable, setAppleAvailable] = useState(false);
+    const tabAnim = useRef(new Animated.Value(0)).current;
+    const nameFieldAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (Platform.OS !== "ios") {
@@ -24,6 +41,29 @@ export function LoginScreen() {
 
         AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
     }, []);
+
+    useEffect(() => {
+        Animated.timing(tabAnim, {
+            toValue: mode === "login" ? 0 : 1,
+            duration: 220,
+            useNativeDriver: false,
+        }).start();
+
+        Animated.timing(nameFieldAnim, {
+            toValue: mode === "register" ? 1 : 0,
+            duration: 220,
+            useNativeDriver: false,
+        }).start();
+    }, [mode, tabAnim, nameFieldAnim]);
+
+    function switchMode(next: Mode) {
+        if (next === mode) {
+            return;
+        }
+
+        setMode(next);
+        setErrorMessage("");
+    }
 
     function validateFields() {
         setErrorMessage("");
@@ -124,118 +164,274 @@ export function LoginScreen() {
         }
     }
 
+    function handleAppleUnavailable() {
+        setErrorMessage(
+            Platform.OS === "ios"
+                ? "Login com Apple indisponível neste dispositivo. Verifique se há uma conta Apple configurada."
+                : "Login com Apple está disponível apenas em dispositivos iOS."
+        );
+    }
+
+    const thumbLeft = tabAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ["0%", "50%"],
+    });
+
+    const useNativeAppleButton = Platform.OS === "ios" && appleAvailable;
+
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
-                <Text style={styles.title}>Chat Firebase</Text>
-                <Text style={styles.subtitle}>
-                    {mode === "login" ? "Entre com sua conta." : "Crie uma conta com e-mail e senha."}
-                </Text>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={[styles.blob, styles.blobTop]} />
+            <View style={[styles.blob, styles.blobBottom]} />
 
-                {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+            <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+                    <View style={styles.brand}>
+                        <View style={styles.logoRing}>
+                            <View style={styles.logoDot} />
+                        </View>
+                        <Text style={styles.eyebrow}>CHAT SEGURO · TEMPO REAL</Text>
+                    </View>
 
-                {mode === "register" && (
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Nome"
-                        value={name}
-                        onChangeText={(value) => { setName(value); setErrorMessage(""); }}
-                        editable={!loading}
+                    <Text style={styles.title}>Chat Firebase</Text>
+                    <Text style={styles.subtitle}>
+                        {mode === "login" ? "Entre pra continuar suas conversas." : "Crie sua conta pra começar a conversar."}
+                    </Text>
+
+                    {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+
+                    <View style={styles.tabs}>
+                        <Animated.View style={[styles.tabThumb, { left: thumbLeft }]} />
+
+                        <Pressable onPress={() => switchMode("login")} style={styles.tab}>
+                            <Text style={[styles.tabText, mode === "login" && styles.tabTextActive]}>Entrar</Text>
+                        </Pressable>
+                        <Pressable onPress={() => switchMode("register")} style={styles.tab}>
+                            <Text style={[styles.tabText, mode === "register" && styles.tabTextActive]}>Cadastrar</Text>
+                        </Pressable>
+                    </View>
+
+                    <View style={styles.form}>
+                        <Animated.View
+                            style={{
+                                maxHeight: nameFieldAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 100] }),
+                                opacity: nameFieldAnim,
+                                overflow: "hidden",
+                            }}
+                        >
+                            <TextField
+                                label="Nome"
+                                placeholder="Como podemos te chamar?"
+                                value={name}
+                                onChangeText={(value) => { setName(value); setErrorMessage(""); }}
+                                editable={!loading && mode === "register"}
+                            />
+                        </Animated.View>
+
+                        <TextField
+                            label="E-mail"
+                            placeholder="voce@email.com"
+                            value={email}
+                            onChangeText={(value) => { setEmail(value); setErrorMessage(""); }}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="email-address"
+                            editable={!loading}
+                        />
+
+                        <TextField
+                            label="Senha"
+                            placeholder="Mínimo de 6 caracteres"
+                            value={password}
+                            onChangeText={(value) => { setPassword(value); setErrorMessage(""); }}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            editable={!loading}
+                        />
+                    </View>
+
+                    <View style={styles.statusRow}>
+                        {loading && <ActivityIndicator size="small" color={colors.primary} />}
+                    </View>
+
+                    <Button
+                        title={mode === "login" ? "Entrar" : "Criar conta"}
+                        onPress={handleSubmit}
+                        disabled={loading}
                     />
-                )}
 
-                <TextInput
-                    style={styles.input}
-                    placeholder="E-mail"
-                    value={email}
-                    onChangeText={(value) => { setEmail(value); setErrorMessage(""); }}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    editable={!loading}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Senha"
-                    value={password}
-                    onChangeText={(value) => { setPassword(value); setErrorMessage(""); }}
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                />
+                    <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>OU CONTINUE COM</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
 
-                {loading ? (
-                    <ActivityIndicator size="large" style={styles.loading} />
-                ) : (
-                    <View style={styles.buttons}>
-                        <Button
-                            title={mode === "login" ? "Entrar" : "Criar conta"}
-                            onPress={handleSubmit}
-                        />
-                        <Button
-                            title={mode === "login" ? "Não tenho conta, cadastrar" : "Já tenho conta, entrar"}
-                            onPress={() => { setMode(mode === "login" ? "register" : "login"); setErrorMessage(""); }}
+                    <View style={styles.socialStack}>
+                        <SocialButton
+                            title="Entrar com Google"
+                            icon={<GoogleMark />}
+                            onPress={handleGoogleLogin}
+                            disabled={loading}
                         />
 
-                        <View style={styles.separator} />
-
-                        <Button title="Entrar com Google" onPress={handleGoogleLogin} />
-
-                        {Platform.OS === "ios" && appleAvailable && (
+                        {useNativeAppleButton ? (
                             <AppleAuthentication.AppleAuthenticationButton
                                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                                cornerRadius={8}
-                                style={styles.appleButton}
+                                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                                cornerRadius={radius.md}
+                                style={styles.appleNativeButton}
                                 onPress={handleAppleLogin}
+                            />
+                        ) : (
+                            <SocialButton
+                                title="Entrar com Apple"
+                                icon={<AppleMark />}
+                                onPress={handleAppleUnavailable}
+                                disabled={loading}
                             />
                         )}
                     </View>
-                )}
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
         flex: 1,
+        backgroundColor: colors.background,
+        overflow: "hidden",
+    },
+    flex: {
+        flex: 1,
+    },
+    blob: {
+        position: "absolute",
+        borderRadius: 999,
+    },
+    blobTop: {
+        width: 280,
+        height: 280,
+        top: -130,
+        right: -100,
+        backgroundColor: "rgba(61, 220, 255, 0.14)",
+    },
+    blobBottom: {
+        width: 220,
+        height: 220,
+        bottom: -100,
+        left: -80,
+        backgroundColor: "rgba(139, 92, 246, 0.12)",
     },
     content: {
-        flex: 1,
-        padding: 24,
+        flexGrow: 1,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
         justifyContent: "center",
-        gap: 16,
+        gap: spacing.sm,
+    },
+    brand: {
+        alignItems: "center",
+        gap: 6,
+        marginBottom: 2,
+    },
+    logoRing: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        borderWidth: 1.5,
+        borderColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    logoDot: {
+        width: 15,
+        height: 15,
+        borderRadius: 8,
+        backgroundColor: colors.primary,
+        shadowColor: colors.primary,
+        shadowOpacity: 0.8,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+    },
+    eyebrow: {
+        color: colors.textFaint,
+        fontSize: 10,
+        fontWeight: "700",
+        letterSpacing: 1.3,
     },
     title: {
-        fontSize: 28,
-        fontWeight: "bold",
+        fontSize: 25,
+        fontWeight: "800",
+        color: colors.text,
+        textAlign: "center",
+        letterSpacing: 0.2,
     },
     subtitle: {
-        fontSize: 16,
-        marginBottom: 8,
+        fontSize: 14,
+        color: colors.textMuted,
+        textAlign: "center",
+        marginBottom: 2,
     },
-    input: {
+    tabs: {
+        flexDirection: "row",
+        backgroundColor: colors.surface,
+        borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: "#999",
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 16,
+        borderColor: colors.border,
+        padding: 4,
+        position: "relative",
     },
-    buttons: {
-        gap: 12,
+    tabThumb: {
+        position: "absolute",
+        top: 4,
+        bottom: 4,
+        width: "50%",
+        backgroundColor: colors.primary,
+        borderRadius: radius.sm,
     },
-    separator: {
+    tab: {
+        flex: 1,
+        paddingVertical: 9,
+        alignItems: "center",
+    },
+    tabText: {
+        color: colors.textMuted,
+        fontWeight: "700",
+        fontSize: 14,
+    },
+    tabTextActive: {
+        color: colors.background,
+    },
+    form: {
+        gap: spacing.sm,
+    },
+    statusRow: {
+        height: 16,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    divider: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+    dividerLine: {
+        flex: 1,
         height: 1,
-        backgroundColor: "#ddd",
-        marginVertical: 4,
+        backgroundColor: colors.border,
     },
-    appleButton: {
-        height: 44,
+    dividerText: {
+        color: colors.textFaint,
+        fontSize: 12,
+        fontWeight: "600",
     },
-    loading: {
-        marginTop: 16,
+    socialStack: {
+        gap: spacing.xs + 4,
+    },
+    appleNativeButton: {
+        height: 48,
     },
 });

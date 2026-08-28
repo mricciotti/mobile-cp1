@@ -19,10 +19,6 @@ import { auth } from "../config/firebase";
 import { saveUserProfile } from "./userService";
 import { AuthProvider, ChatUser } from "../types/User";
 
-GoogleSignin.configure({
-    webClientId: "465066727567-thn2d81abjrtr8eth7vcjbbo37at4cc1.apps.googleusercontent.com",
-});
-
 function toChatUser(firebaseUser: FirebaseUser, provider: AuthProvider): ChatUser {
     return {
         uid: firebaseUser.uid,
@@ -57,6 +53,13 @@ export async function loginWithEmail(email: string, password: string): Promise<C
 
 export async function loginWithGoogle(): Promise<ChatUser> {
     try {
+        // Configurado aqui (em vez de no escopo do módulo) para não derrubar o
+        // app inteiro ao abrir em ambientes sem o módulo nativo do Google
+        // Sign-In (ex: Expo Go puro, sem o development build).
+        GoogleSignin.configure({
+            webClientId: "465066727567-thn2d81abjrtr8eth7vcjbbo37at4cc1.apps.googleusercontent.com",
+        });
+
         await GoogleSignin.hasPlayServices();
         const response = await GoogleSignin.signIn();
 
