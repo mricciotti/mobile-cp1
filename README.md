@@ -15,7 +15,7 @@ tempo real via Firebase Realtime Database.
 ## Tecnologias utilizadas
 
 - React Native
-- Expo (SDK 54)
+- Expo (SDK 55)
 - TypeScript
 - Firebase Authentication (e-mail/senha, Google, Apple)
 - Firebase Realtime Database
@@ -73,6 +73,8 @@ app-firestore/
   app.json
   eas.json
   database.rules.json
+  plugins/
+    withGradleMemoryFix.js  # config plugin: ajusta memória do Gradle no build EAS
   src/
     components/    # Loading, ErrorMessage, UserItem, ChatMessage, ChatInput,
                    # Button, TextField, SocialButton, BrandMarks (Google/Apple)
@@ -86,21 +88,22 @@ app-firestore/
     theme/          # theme.ts (cores, espaçamentos, raios usados nos estilos)
 ```
 
-## Configuração do Firebase / Google / Apple
+## Configuração do Firebase
+ O que já está configurado nesse projeto:
 
-O projeto já está com o código pronto para os três provedores, mas algumas
-chaves e cadastros precisam ser feitos manualmente no console do Firebase,
-Google Cloud e Apple Developer (URL do Realtime Database, apps Android/iOS,
-Web Client ID do Google, credenciais da Apple, regras de segurança).
-
-Passo a passo completo em
-[`CONFIGURACAO_GOOGLE_APPLE.md`](CONFIGURACAO_GOOGLE_APPLE.md).
+- **Realtime Database** criado, com as regras de segurança de
+  `database.rules.json` publicadas (só participantes autenticados de cada
+  conversa leem/escrevem nela).
+- **Authentication** com e-mail/senha e Google habilitados (Apple seguiria o
+  mesmo caminho — ver limitação documentada acima).
+- Apps **Android** e **iOS** registrados no projeto, necessários pros
+  módulos nativos de login (`google-services.json`/`GoogleService-Info.plist`
+  na raiz de `app-firestore/`).
 
 ## Como executar
 
-Pré-requisitos: Node.js LTS, uma conta Expo/EAS gratuita e (para Google e
-Apple Sign-In reais) um development build gerado via EAS — veja o guia de
-configuração acima.
+Pré-requisitos: Node.js LTS e, para testar Google/Apple de verdade, uma
+conta Expo/EAS gratuita e um development build gerado via EAS.
 
 ```bash
 cd app-firestore
