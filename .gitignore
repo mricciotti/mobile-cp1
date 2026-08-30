@@ -7,10 +7,9 @@ node_modules/
 dist/
 web-build/
 
-# Native build output
-android/.gradle/
-android/app/build/
-ios/build/
+# Native build output (gerado sob demanda pelo prebuild/EAS Build, não versionado)
+android/
+ios/
 
 # Logs
 *.log

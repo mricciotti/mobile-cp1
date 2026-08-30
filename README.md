@@ -74,7 +74,8 @@ app-firestore/
   eas.json
   database.rules.json
   src/
-    components/    # Loading, ErrorMessage, UserItem, ChatMessage, ChatInput
+    components/    # Loading, ErrorMessage, UserItem, ChatMessage, ChatInput,
+                   # Button, TextField, SocialButton, BrandMarks (Google/Apple)
     contexts/       # AuthContext (estado de autenticação global)
     hooks/          # useAuth, useChat
     screens/        # LoginScreen, UsersScreen, ChatScreen
@@ -82,6 +83,7 @@ app-firestore/
     types/          # ChatUser/AuthProvider, Conversation/ChatMessage
     utils/          # chatRules (regra de compatibilidade entre provedores)
     config/         # firebase.ts (inicialização do Firebase)
+    theme/          # theme.ts (cores, espaçamentos, raios usados nos estilos)
 ```
 
 ## Configuração do Firebase / Google / Apple
@@ -126,5 +128,36 @@ npx expo start --dev-client
 
 ## Prints da aplicação
 
-> Adicionar screenshots das telas de Login, Contatos e Chat aqui antes da
-> entrega.
+**Login e cadastro**
+
+| Login | Cadastro |
+|---|---|
+| ![Tela de login](screenshots/telaLogin.jpeg) | ![Tela de cadastro](screenshots/telaCadastrar.jpeg) |
+
+**Google Sign-In (nativo)**
+
+![Seletor nativo de conta do Google](screenshots/contasGoogle.jpeg)
+
+**Regra de comunicação entre provedores** — cada lado só vê o provedor compatível:
+
+| Contatos vistos por uma conta Google | Contatos vistos por uma conta e-mail/senha |
+|---|---|
+| ![Contatos de uma conta Google, mostrando só contas e-mail/senha](screenshots/logadoGoogle.jpeg) | ![Contatos de uma conta e-mail/senha, mostrando só contas Google](screenshots/logadoEmail_Senha.jpeg) |
+
+**Chat em tempo real**
+
+| Sem mensagens (estado vazio) | Com mensagens (enviada/recebida) |
+|---|---|
+| ![Chat sem mensagens](screenshots/chatSemMensagem.jpeg) | ![Chat com mensagem enviada e recebida](screenshots/chatComMensagem.jpeg) |
+
+**Dados reais no console do Firebase** — prova de que não há usuário hardcoded nem mensagem simulada:
+
+| Usuários reais no Firebase Authentication | Mensagens reais no Realtime Database |
+|---|---|
+| ![Usuários reais cadastrados no Firebase Authentication, por e-mail/senha e Google](screenshots/usuariosFireBase.jpeg) | ![Estrutura de conversations/messages persistida no Realtime Database](screenshots/mensagensNoRealtimeDatabase.jpeg) |
+
+**Apple Sign-In** — prompt nativo funcionando e erro tratado corretamente (ver [limitação documentada acima](#limitação-conhecida-apple-sign-in)):
+
+| Prompt nativo do iOS | Erro tratado (provedor não habilitado no Firebase) |
+|---|---|
+| ![Prompt nativo de Sign in with Apple](screenshots/loginApple.jpeg) | ![Erro tratado de login com Apple](screenshots/erroLoginApple.jpeg) |

@@ -9,15 +9,20 @@ import {
     User as FirebaseUser,
 } from "firebase/auth";
 import * as AppleAuthentication from "expo-apple-authentication";
-import {
-    GoogleSignin,
-    isErrorWithCode,
-    isSuccessResponse,
-    statusCodes,
-} from "@react-native-google-signin/google-signin";
+import { TurboModuleRegistry } from "react-native";
 import { auth } from "../config/firebase";
 import { saveUserProfile } from "./userService";
 import { AuthProvider, ChatUser } from "../types/User";
+
+// A lib do Google Sign-In resolve seu módulo nativo com "getEnforcing", que
+// lança um erro fatal assim que o pacote é importado se o módulo nativo não
+// existir (ex: Expo Go, sem o development build) — inclusive derrubando o
+// LogBox com uma tela de erro que não dá pra suprimir depois. "get" (em vez
+// de "getEnforcing") é a variante segura: retorna vazio em vez de lançar,
+// permitindo checar a disponibilidade ANTES de sequer importar o pacote.
+function isGoogleSignInAvailable(): boolean {
+    return TurboModuleRegistry.get("RNGoogleSignin") != null;
+}
 
 function toChatUser(firebaseUser: FirebaseUser, provider: AuthProvider): ChatUser {
     return {
@@ -52,10 +57,20 @@ export async function loginWithEmail(email: string, password: string): Promise<C
 }
 
 export async function loginWithGoogle(): Promise<ChatUser> {
+    if (!isGoogleSignInAvailable()) {
+        throw new Error(
+            "Login com Google não está disponível neste ambiente. É necessário o development build (não funciona no Expo Go)."
+        );
+    }
+
+    // Import dinâmico (em vez de estático no topo do arquivo): assim, em
+    // ambientes onde o módulo nativo não existe, o pacote nem chega a ser
+    // avaliado — a checagem acima já barrou antes disso.
+    const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = await import(
+        "@react-native-google-signin/google-signin"
+    );
+
     try {
-        // Configurado aqui (em vez de no escopo do módulo) para não derrubar o
-        // app inteiro ao abrir em ambientes sem o módulo nativo do Google
-        // Sign-In (ex: Expo Go puro, sem o development build).
         GoogleSignin.configure({
             webClientId: "465066727567-thn2d81abjrtr8eth7vcjbbo37at4cc1.apps.googleusercontent.com",
         });
@@ -86,7 +101,7 @@ export async function loginWithGoogle(): Promise<ChatUser> {
         await saveUserProfile(chatUser);
         return chatUser;
     } catch (error) {
-        if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
+        if (typeof isErrorWithCode === "function" && isErrorWithCode(error) && error.code === statusCodes?.SIGN_IN_CANCELLED) {
             throw new Error("Login com Google cancelado.");
         }
 
@@ -126,10 +141,14 @@ export async function loginWithApple(): Promise<ChatUser> {
 }
 
 export async function logout(): Promise<void> {
-    try {
-        await GoogleSignin.signOut();
-    } catch {
-        // usuário pode não ter entrado com Google; ignora.
+    if (isGoogleSignInAvailable()) {
+        try {
+            const { GoogleSignin } = await import("@react-native-google-signin/google-signin");
+            await GoogleSignin.signOut();
+        } catch {
+            // usuário não entrou com Google; ignora — o logout do Firebase
+            // abaixo continua valendo pra qualquer provedor.
+        }
     }
 
     await signOut(auth);

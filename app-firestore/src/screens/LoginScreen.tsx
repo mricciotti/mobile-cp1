@@ -43,6 +43,15 @@ export function LoginScreen() {
     }, []);
 
     useEffect(() => {
+        if (!errorMessage) {
+            return;
+        }
+
+        const timeout = setTimeout(() => setErrorMessage(""), 10000);
+        return () => clearTimeout(timeout);
+    }, [errorMessage]);
+
+    useEffect(() => {
         Animated.timing(tabAnim, {
             toValue: mode === "login" ? 0 : 1,
             duration: 220,
@@ -190,10 +199,9 @@ export function LoginScreen() {
                         <View style={styles.logoRing}>
                             <View style={styles.logoDot} />
                         </View>
-                        <Text style={styles.eyebrow}>CHAT SEGURO · TEMPO REAL</Text>
                     </View>
 
-                    <Text style={styles.title}>Chat Firebase</Text>
+                    <Text style={styles.title}>CHAT EM TEMPO REAL</Text>
                     <Text style={styles.subtitle}>
                         {mode === "login" ? "Entre pra continuar suas conversas." : "Crie sua conta pra começar a conversar."}
                     </Text>
@@ -221,7 +229,7 @@ export function LoginScreen() {
                         >
                             <TextField
                                 label="Nome"
-                                placeholder="Como podemos te chamar?"
+                                placeholder="Nome"
                                 value={name}
                                 onChangeText={(value) => { setName(value); setErrorMessage(""); }}
                                 editable={!loading && mode === "register"}
@@ -230,7 +238,7 @@ export function LoginScreen() {
 
                         <TextField
                             label="E-mail"
-                            placeholder="voce@email.com"
+                            placeholder="Email"
                             value={email}
                             onChangeText={(value) => { setEmail(value); setErrorMessage(""); }}
                             autoCapitalize="none"
@@ -241,7 +249,7 @@ export function LoginScreen() {
 
                         <TextField
                             label="Senha"
-                            placeholder="Mínimo de 6 caracteres"
+                            placeholder="Senha"
                             value={password}
                             onChangeText={(value) => { setPassword(value); setErrorMessage(""); }}
                             secureTextEntry

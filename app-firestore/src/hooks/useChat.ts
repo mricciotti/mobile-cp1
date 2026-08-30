@@ -42,6 +42,15 @@ export function useChat(currentUserId: string, otherUserId: string) {
         };
     }, [currentUserId, otherUserId]);
 
+    useEffect(() => {
+        if (!error) {
+            return;
+        }
+
+        const timeout = setTimeout(() => setError(null), 10000);
+        return () => clearTimeout(timeout);
+    }, [error]);
+
     const sendText = useCallback(
         async (text: string) => {
             if (!conversationId) {
