@@ -1,6 +1,7 @@
 import { get, off, onValue, push, ref, serverTimestamp, set } from "firebase/database";
 import { database } from "../config/firebase";
 import { ChatMessage, Conversation } from "../types/chat";
+import { buildConversationId } from "../utils/conversationId";
 
 interface ConversationRecord {
     participants: [string, string];
@@ -12,10 +13,6 @@ interface MessageRecord {
     receiverId: string;
     text: string;
     createdAt: number;
-}
-
-function buildConversationId(uidA: string, uidB: string): string {
-    return [uidA, uidB].sort().join("_");
 }
 
 export async function findOrCreateConversation(uidA: string, uidB: string): Promise<Conversation> {

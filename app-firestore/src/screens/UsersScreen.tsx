@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../hooks/useAuth";
 import { subscribeToContacts } from "../services/userService";
+import { RootStackParamList } from "../navigation/types";
+import { getDirectRouteParams } from "../utils/conversationId";
 import { UserItem } from "../components/UserItem";
 import { Loading } from "../components/Loading";
 import { Button } from "../components/Button";
 import { colors, radius, spacing } from "../theme/theme";
-import { ChatUser } from "../types/User";
+import { ChatUser } from "../types/user";
 
-interface UsersScreenProps {
-    onSelectContact: (contact: ChatUser) => void;
-}
+type UsersScreenProps = NativeStackScreenProps<RootStackParamList, "Users">;
 
-export function UsersScreen({ onSelectContact }: UsersScreenProps) {
+export function UsersScreen({ navigation }: UsersScreenProps) {
     const { user, logout } = useAuth();
     const [contacts, setContacts] = useState<ChatUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -70,7 +71,14 @@ export function UsersScreen({ onSelectContact }: UsersScreenProps) {
                             </Text>
                         </View>
                     }
-                    renderItem={({ item }) => <UserItem user={item} onPress={onSelectContact} />}
+                    renderItem={({ item }) => (
+                        <UserItem
+                            user={item}
+                            onPress={(contact: ChatUser) =>
+                                navigation.navigate("Chat", getDirectRouteParams(user.uid, contact.uid))
+                            }
+                        />
+                    )}
                     ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
                 />
             )}

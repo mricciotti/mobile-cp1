@@ -7,7 +7,7 @@ import { ChatInput } from "../components/ChatInput";
 import { Loading } from "../components/Loading";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { colors, radius, spacing } from "../theme/theme";
-import { ChatUser } from "../types/User";
+import { ChatUser } from "../types/user";
 import { ChatMessage as ChatMessageType } from "../types/chat";
 
 interface ChatScreenProps {

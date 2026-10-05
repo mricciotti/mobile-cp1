@@ -3,7 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { logout as logoutService } from "../services/authService";
 import { getUserProfile } from "../services/userService";
-import { AuthProvider as AuthProviderType, ChatUser } from "../types/User";
+import { ChatUser } from "../types/user";
 
 interface AuthContextValue {
     user: ChatUser | null;
@@ -13,16 +13,8 @@ interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function mapFirebaseProviderId(providerId: string | undefined): AuthProviderType {
-    if (providerId === "google.com") {
-        return "google";
-    }
-
-    if (providerId === "apple.com") {
-        return "apple";
-    }
-
-    return "password";
+function getCreatedAt(creationTime: string | undefined): number {
+    return creationTime ? Date.parse(creationTime) : Date.now();
 }
 
 export function AuthContextProvider({ children }: { children: ReactNode }) {
@@ -37,18 +29,25 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            const provider = mapFirebaseProviderId(firebaseUser.providerData[0]?.providerId);
-            const profile = await getUserProfile(firebaseUser.uid);
-
-            setUser(
-                profile ?? {
-                    uid: firebaseUser.uid,
-                    name: firebaseUser.displayName ?? firebaseUser.email ?? "Usuário",
-                    email: firebaseUser.email,
-                    provider,
-                }
-            );
-            setLoading(false);
+            try {
+                const profile = await getUserProfile(firebaseUser.uid);
+                setUser(
+                    profile ?? {
+                        uid: firebaseUser.uid,
+                        name: firebaseUser.displayName ?? firebaseUser.email ?? "Usuário",
+                        email: firebaseUser.email ?? "",
+                        phoneNumber: firebaseUser.phoneNumber ?? "",
+                        birthDate: "",
+                        photoUrl: firebaseUser.photoURL ?? "",
+                        createdAt: getCreatedAt(firebaseUser.metadata.creationTime),
+                    }
+                );
+            } catch (error) {
+                console.error(error);
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
         });
 
         return unsubscribe;

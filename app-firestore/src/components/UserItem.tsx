@@ -1,18 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, glow, radius, spacing } from "../theme/theme";
-import { ChatUser } from "../types/User";
-
-const PROVIDER_LABELS: Record<ChatUser["provider"], string> = {
-    password: "E-mail e senha",
-    google: "Google",
-    apple: "Apple",
-};
-
-const PROVIDER_COLORS: Record<ChatUser["provider"], string> = {
-    password: colors.badgePassword,
-    google: colors.badgeGoogle,
-    apple: colors.badgeApple,
-};
+import { ChatUser } from "../types/user";
 
 interface UserItemProps {
     user: ChatUser;
@@ -21,23 +9,18 @@ interface UserItemProps {
 
 export function UserItem({ user, onPress }: UserItemProps) {
     const initial = user.name.trim().charAt(0).toUpperCase() || "?";
-    const accent = PROVIDER_COLORS[user.provider];
-
     return (
         <Pressable
             onPress={() => onPress(user)}
             style={({ pressed }) => [styles.container, pressed && styles.pressed]}
         >
-            <View style={[styles.avatar, { borderColor: accent }]}>
-                <Text style={[styles.avatarText, { color: accent }]}>{initial}</Text>
+            <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initial}</Text>
             </View>
 
             <View style={styles.info}>
                 <Text style={styles.name}>{user.name}</Text>
-                <View style={[styles.badge, { borderColor: accent }]}>
-                    <View style={[styles.badgeDot, { backgroundColor: accent }]} />
-                    <Text style={[styles.badgeText, { color: accent }]}>{PROVIDER_LABELS[user.provider]}</Text>
-                </View>
+                <Text style={styles.email}>{user.email}</Text>
             </View>
 
             <Text style={styles.chevron}>›</Text>
@@ -73,6 +56,7 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 18,
         fontWeight: "800",
+        color: colors.primary,
     },
     info: {
         flex: 1,
@@ -83,25 +67,9 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: colors.text,
     },
-    badge: {
-        flexDirection: "row",
-        alignItems: "center",
-        alignSelf: "flex-start",
-        gap: 6,
-        borderWidth: 1,
-        borderRadius: radius.pill,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-    },
-    badgeDot: {
-        width: 6,
-        height: 6,
-        borderRadius: radius.pill,
-    },
-    badgeText: {
+    email: {
         fontSize: 11,
-        fontWeight: "700",
-        letterSpacing: 0.3,
+        color: colors.textMuted,
     },
     chevron: {
         fontSize: 22,

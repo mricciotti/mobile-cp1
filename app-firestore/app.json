@@ -14,7 +14,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mobilecp1.chat",
-      "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
@@ -30,8 +29,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@react-native-google-signin/google-signin",
-      "expo-apple-authentication",
       "./plugins/withGradleMemoryFix.js"
     ],
     "extra": {

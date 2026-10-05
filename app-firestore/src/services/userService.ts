@@ -1,30 +1,39 @@
 import { get, off, onValue, ref, set } from "firebase/database";
 import { database } from "../config/firebase";
-import { AuthProvider, ChatUser } from "../types/User";
-import { canChatWith } from "../utils/chatRules";
+import { ChatUser } from "../types/user";
 
 const USERS_PATH = "users";
 
 interface UserRecord {
-    name: string;
-    email: string | null;
-    provider: AuthProvider;
+    name?: string;
+    email?: string | null;
+    phoneNumber?: string;
+    birthDate?: string;
+    photoUrl?: string;
+    createdAt?: number;
 }
 
 function toChatUser(uid: string, record: UserRecord): ChatUser {
     return {
         uid,
-        name: record.name,
-        email: record.email ?? null,
-        provider: record.provider,
+        name: record.name ?? "Usuário",
+        email: record.email ?? "",
+        phoneNumber: record.phoneNumber ?? "",
+        birthDate: record.birthDate ?? "",
+        photoUrl: record.photoUrl ?? "",
+        createdAt: record.createdAt ?? Date.now(),
     };
 }
 
 export async function saveUserProfile(user: ChatUser): Promise<void> {
     await set(ref(database, `${USERS_PATH}/${user.uid}`), {
+        uid: user.uid,
         name: user.name,
         email: user.email,
-        provider: user.provider,
+        phoneNumber: user.phoneNumber,
+        birthDate: user.birthDate,
+        photoUrl: user.photoUrl,
+        createdAt: user.createdAt,
     });
 }
 
@@ -51,8 +60,7 @@ export function subscribeToContacts(currentUser: ChatUser, callback: (contacts: 
 
         const contacts = Object.entries(data)
             .filter(([uid]) => uid !== currentUser.uid)
-            .map(([uid, record]) => toChatUser(uid, record))
-            .filter((candidate) => canChatWith(currentUser.provider, candidate.provider));
+            .map(([uid, record]) => toChatUser(uid, record));
 
         callback(contacts);
     });

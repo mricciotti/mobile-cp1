@@ -12,13 +12,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FirebaseError } from "firebase/app";
-import * as AppleAuthentication from "expo-apple-authentication";
-import { loginWithApple, loginWithEmail, loginWithGoogle, registerWithEmail } from "../services/authService";
+import { loginWithEmail, registerWithEmail } from "../services/authService";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Button } from "../components/Button";
 import { TextField } from "../components/TextField";
-import { SocialButton } from "../components/SocialButton";
-import { AppleMark, GoogleMark } from "../components/BrandMarks";
 import { colors, radius, spacing } from "../theme/theme";
 
 type Mode = "login" | "register";
@@ -30,17 +27,8 @@ export function LoginScreen() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    const [appleAvailable, setAppleAvailable] = useState(false);
     const tabAnim = useRef(new Animated.Value(0)).current;
     const nameFieldAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        if (Platform.OS !== "ios") {
-            return;
-        }
-
-        AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
-    }, []);
 
     useEffect(() => {
         if (!errorMessage) {
@@ -149,44 +137,10 @@ export function LoginScreen() {
         }
     }
 
-    async function handleGoogleLogin() {
-        try {
-            setLoading(true);
-            setErrorMessage("");
-            await loginWithGoogle();
-        } catch (error) {
-            setErrorMessage(getErrorMessage(error));
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleAppleLogin() {
-        try {
-            setLoading(true);
-            setErrorMessage("");
-            await loginWithApple();
-        } catch (error) {
-            setErrorMessage(getErrorMessage(error));
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    function handleAppleUnavailable() {
-        setErrorMessage(
-            Platform.OS === "ios"
-                ? "Login com Apple indisponível neste dispositivo. Verifique se há uma conta Apple configurada."
-                : "Login com Apple está disponível apenas em dispositivos iOS."
-        );
-    }
-
     const thumbLeft = tabAnim.interpolate({
         inputRange: [0, 1],
         outputRange: ["0%", "50%"],
     });
-
-    const useNativeAppleButton = Platform.OS === "ios" && appleAvailable;
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -269,37 +223,6 @@ export function LoginScreen() {
                         disabled={loading}
                     />
 
-                    <View style={styles.divider}>
-                        <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>OU CONTINUE COM</Text>
-                        <View style={styles.dividerLine} />
-                    </View>
-
-                    <View style={styles.socialStack}>
-                        <SocialButton
-                            title="Entrar com Google"
-                            icon={<GoogleMark />}
-                            onPress={handleGoogleLogin}
-                            disabled={loading}
-                        />
-
-                        {useNativeAppleButton ? (
-                            <AppleAuthentication.AppleAuthenticationButton
-                                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                                cornerRadius={radius.md}
-                                style={styles.appleNativeButton}
-                                onPress={handleAppleLogin}
-                            />
-                        ) : (
-                            <SocialButton
-                                title="Entrar com Apple"
-                                icon={<AppleMark />}
-                                onPress={handleAppleUnavailable}
-                                disabled={loading}
-                            />
-                        )}
-                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -420,26 +343,5 @@ const styles = StyleSheet.create({
         height: 16,
         alignItems: "center",
         justifyContent: "center",
-    },
-    divider: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.sm,
-    },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: colors.border,
-    },
-    dividerText: {
-        color: colors.textFaint,
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    socialStack: {
-        gap: spacing.xs + 4,
-    },
-    appleNativeButton: {
-        height: 48,
     },
 });
