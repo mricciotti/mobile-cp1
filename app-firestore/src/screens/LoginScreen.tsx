@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
-    Animated,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -12,23 +11,21 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FirebaseError } from "firebase/app";
-import { loginWithEmail, registerWithEmail } from "../services/authService";
+import { loginWithEmail } from "../services/authService";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Button } from "../components/Button";
 import { TextField } from "../components/TextField";
 import { colors, radius, spacing } from "../theme/theme";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types";
 
-type Mode = "login" | "register";
+type LoginScreenProps = NativeStackScreenProps<RootStackParamList, "Login">;
 
-export function LoginScreen() {
-    const [mode, setMode] = useState<Mode>("login");
-    const [name, setName] = useState("");
+export function LoginScreen({ navigation }: LoginScreenProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    const tabAnim = useRef(new Animated.Value(0)).current;
-    const nameFieldAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (!errorMessage) {
@@ -39,36 +36,8 @@ export function LoginScreen() {
         return () => clearTimeout(timeout);
     }, [errorMessage]);
 
-    useEffect(() => {
-        Animated.timing(tabAnim, {
-            toValue: mode === "login" ? 0 : 1,
-            duration: 220,
-            useNativeDriver: false,
-        }).start();
-
-        Animated.timing(nameFieldAnim, {
-            toValue: mode === "register" ? 1 : 0,
-            duration: 220,
-            useNativeDriver: false,
-        }).start();
-    }, [mode, tabAnim, nameFieldAnim]);
-
-    function switchMode(next: Mode) {
-        if (next === mode) {
-            return;
-        }
-
-        setMode(next);
-        setErrorMessage("");
-    }
-
     function validateFields() {
         setErrorMessage("");
-
-        if (mode === "register" && !name.trim()) {
-            setErrorMessage("Informe seu nome.");
-            return false;
-        }
 
         if (!email.trim() || !password.trim()) {
             setErrorMessage("Informe e-mail e senha.");
@@ -123,11 +92,7 @@ export function LoginScreen() {
             setLoading(true);
             setErrorMessage("");
 
-            if (mode === "register") {
-                await registerWithEmail(name.trim(), email.trim(), password);
-            } else {
-                await loginWithEmail(email.trim(), password);
-            }
+            await loginWithEmail(email.trim(), password);
 
             setPassword("");
         } catch (error) {
@@ -136,11 +101,6 @@ export function LoginScreen() {
             setLoading(false);
         }
     }
-
-    const thumbLeft = tabAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ["0%", "50%"],
-    });
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -156,40 +116,20 @@ export function LoginScreen() {
                     </View>
 
                     <Text style={styles.title}>CHAT EM TEMPO REAL</Text>
-                    <Text style={styles.subtitle}>
-                        {mode === "login" ? "Entre pra continuar suas conversas." : "Crie sua conta pra começar a conversar."}
-                    </Text>
+                    <Text style={styles.subtitle}>Entre pra continuar suas conversas.</Text>
 
                     {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
 
                     <View style={styles.tabs}>
-                        <Animated.View style={[styles.tabThumb, { left: thumbLeft }]} />
-
-                        <Pressable onPress={() => switchMode("login")} style={styles.tab}>
-                            <Text style={[styles.tabText, mode === "login" && styles.tabTextActive]}>Entrar</Text>
-                        </Pressable>
-                        <Pressable onPress={() => switchMode("register")} style={styles.tab}>
-                            <Text style={[styles.tabText, mode === "register" && styles.tabTextActive]}>Cadastrar</Text>
+                        <View style={[styles.tab, styles.activeTab]}>
+                            <Text style={[styles.tabText, styles.tabTextActive]}>Entrar</Text>
+                        </View>
+                        <Pressable onPress={() => navigation.navigate("Register")} style={styles.tab}>
+                            <Text style={styles.tabText}>Cadastrar</Text>
                         </Pressable>
                     </View>
 
                     <View style={styles.form}>
-                        <Animated.View
-                            style={{
-                                maxHeight: nameFieldAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 100] }),
-                                opacity: nameFieldAnim,
-                                overflow: "hidden",
-                            }}
-                        >
-                            <TextField
-                                label="Nome"
-                                placeholder="Nome"
-                                value={name}
-                                onChangeText={(value) => { setName(value); setErrorMessage(""); }}
-                                editable={!loading && mode === "register"}
-                            />
-                        </Animated.View>
-
                         <TextField
                             label="E-mail"
                             placeholder="Email"
@@ -218,7 +158,7 @@ export function LoginScreen() {
                     </View>
 
                     <Button
-                        title={mode === "login" ? "Entrar" : "Criar conta"}
+                        title="Entrar"
                         onPress={handleSubmit}
                         disabled={loading}
                     />
@@ -315,18 +255,14 @@ const styles = StyleSheet.create({
         padding: 4,
         position: "relative",
     },
-    tabThumb: {
-        position: "absolute",
-        top: 4,
-        bottom: 4,
-        width: "50%",
-        backgroundColor: colors.primary,
-        borderRadius: radius.sm,
-    },
     tab: {
         flex: 1,
         paddingVertical: 9,
         alignItems: "center",
+    },
+    activeTab: {
+        backgroundColor: colors.primary,
+        borderRadius: radius.sm,
     },
     tabText: {
         color: colors.textMuted,

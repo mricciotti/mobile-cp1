@@ -1,59 +1,71 @@
 import { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../hooks/useAuth";
-import { subscribeToContacts } from "../services/userService";
+import { searchUsers } from "../services/userService";
 import { RootStackParamList } from "../navigation/types";
 import { getDirectRouteParams } from "../utils/conversationId";
 import { UserItem } from "../components/UserItem";
 import { Loading } from "../components/Loading";
 import { Button } from "../components/Button";
 import { colors, radius, spacing } from "../theme/theme";
-import { ChatUser } from "../types/user";
+import { PublicUser } from "../types/user";
+import { Avatar } from "../components/Avatar";
 
 type UsersScreenProps = NativeStackScreenProps<RootStackParamList, "Users">;
 
 export function UsersScreen({ navigation }: UsersScreenProps) {
     const { user, logout } = useAuth();
-    const [contacts, setContacts] = useState<ChatUser[]>([]);
+    const [contacts, setContacts] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
 
     useEffect(() => {
         if (!user) {
             return;
         }
-
-        const unsubscribe = subscribeToContacts(user, (updatedContacts) => {
-            setContacts(updatedContacts);
-            setLoading(false);
-        });
-
-        return unsubscribe;
-    }, [user]);
+        let active = true;
+        setLoading(true);
+        searchUsers(search).then((matches) => {
+            if (!active) return;
+            setContacts(matches.filter((contact) => contact.uid !== user.uid));
+        }).catch((error: unknown) => {
+            console.error(error);
+            if (active) setContacts([]);
+        }).finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
+    }, [user, search]);
 
     if (!user) {
         return null;
     }
 
-    const initial = user.name.trim().charAt(0).toUpperCase() || "?";
-
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{initial}</Text>
-                    </View>
+                    <Avatar photoUrl={user.photoUrl} name={user.name} size={44} />
                     <View>
                         <Text style={styles.eyebrow}>LOGADO COMO</Text>
                         <Text style={styles.userName}>{user.name}</Text>
                     </View>
                 </View>
-                <Button title="Sair" variant="ghost" onPress={logout} style={styles.logoutButton} />
+                <View style={styles.headerActions}>
+                    <Button title="Perfil" variant="ghost" onPress={() => navigation.navigate("Profile", { userId: user.uid })} style={styles.profileButton} />
+                    <Button title="Sair" variant="ghost" onPress={logout} style={styles.logoutButton} />
+                </View>
             </View>
 
             <Text style={styles.sectionTitle}>Contatos</Text>
+            <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Buscar por nome"
+                placeholderTextColor={colors.textFaint}
+                autoCapitalize="none"
+                style={styles.searchInput}
+            />
 
             {loading ? (
                 <Loading />
@@ -66,17 +78,16 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
                         <View style={styles.emptyState}>
                             <Text style={styles.emptyTitle}>Nenhum contato por aqui</Text>
                             <Text style={styles.emptyText}>
-                                Contas por e-mail/senha conversam com contas Google/Apple, e vice-versa. Assim que
-                                alguém compatível se cadastrar, essa lista atualiza sozinha.
+                                Não encontramos usuários com esse nome ou e-mail.
                             </Text>
                         </View>
                     }
                     renderItem={({ item }) => (
                         <UserItem
                             user={item}
-                            onPress={(contact: ChatUser) =>
-                                navigation.navigate("Chat", getDirectRouteParams(user.uid, contact.uid))
-                            }
+                            onPress={(contact: PublicUser) => {
+                                if (contact.uid !== user.uid) navigation.navigate("Chat", getDirectRouteParams(user.uid, contact.uid));
+                            }}
                         />
                     )}
                     ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
@@ -108,20 +119,12 @@ const styles = StyleSheet.create({
         gap: spacing.sm,
         flexShrink: 1,
     },
-    avatar: {
-        width: 44,
-        height: 44,
-        borderRadius: radius.pill,
-        backgroundColor: colors.surfaceAlt,
-        borderWidth: 1.5,
-        borderColor: colors.primary,
-        alignItems: "center",
-        justifyContent: "center",
+    headerActions: {
+        flexDirection: "row",
+        gap: spacing.xs,
     },
-    avatarText: {
-        color: colors.primary,
-        fontSize: 17,
-        fontWeight: "800",
+    profileButton: {
+        width: 86,
     },
     eyebrow: {
         color: colors.textFaint,
@@ -144,6 +147,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.lg,
         paddingTop: spacing.lg,
         paddingBottom: spacing.sm,
+    },
+    searchInput: {
+        marginHorizontal: spacing.lg,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radius.md,
+        backgroundColor: colors.surface,
+        color: colors.text,
+        paddingHorizontal: spacing.md,
+        paddingVertical: 12,
     },
     listContent: {
         paddingHorizontal: spacing.lg,

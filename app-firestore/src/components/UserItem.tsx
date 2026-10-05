@@ -1,26 +1,23 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, glow, radius, spacing } from "../theme/theme";
-import { ChatUser } from "../types/user";
+import { PublicUser } from "../types/user";
+import { Avatar } from "./Avatar";
 
 interface UserItemProps {
-    user: ChatUser;
-    onPress: (user: ChatUser) => void;
+    user: PublicUser;
+    onPress: (user: PublicUser) => void;
 }
 
 export function UserItem({ user, onPress }: UserItemProps) {
-    const initial = user.name.trim().charAt(0).toUpperCase() || "?";
     return (
         <Pressable
             onPress={() => onPress(user)}
             style={({ pressed }) => [styles.container, pressed && styles.pressed]}
         >
-            <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initial}</Text>
-            </View>
+            <Avatar photoUrl={user.photoUrl} name={user.name} size={46} />
 
             <View style={styles.info}>
                 <Text style={styles.name}>{user.name}</Text>
-                <Text style={styles.email}>{user.email}</Text>
             </View>
 
             <Text style={styles.chevron}>›</Text>
@@ -44,20 +41,6 @@ const styles = StyleSheet.create({
         opacity: 0.75,
         borderColor: colors.borderStrong,
     },
-    avatar: {
-        width: 46,
-        height: 46,
-        borderRadius: radius.pill,
-        borderWidth: 1.5,
-        backgroundColor: colors.backgroundAlt,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    avatarText: {
-        fontSize: 18,
-        fontWeight: "800",
-        color: colors.primary,
-    },
     info: {
         flex: 1,
         gap: 6,
@@ -66,10 +49,6 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: "700",
         color: colors.text,
-    },
-    email: {
-        fontSize: 11,
-        color: colors.textMuted,
     },
     chevron: {
         fontSize: 22,

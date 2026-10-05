@@ -6,10 +6,12 @@ import {
 } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../hooks/useAuth";
-import { getUserProfile } from "../services/userService";
-import { ChatUser } from "../types/user";
+import { getPublicUser } from "../services/userService";
+import { PublicUser } from "../types/user";
 import { ChatScreen } from "../screens/ChatScreen";
 import { LoginScreen } from "../screens/LoginScreen";
+import { RegisterScreen } from "../screens/RegisterScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
 import { UsersScreen } from "../screens/UsersScreen";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
@@ -21,7 +23,7 @@ type ChatRouteProps = NativeStackScreenProps<RootStackParamList, "Chat">;
 
 function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
     const { user } = useAuth();
-    const [otherUser, setOtherUser] = useState<ChatUser | null>(null);
+    const [otherUser, setOtherUser] = useState<PublicUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +34,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
         setError(null);
         setOtherUser(null);
 
-        getUserProfile(route.params.otherUserId)
+        getPublicUser(route.params.otherUserId)
             .then((profile) => {
                 if (!active) {
                     return;
@@ -108,9 +110,13 @@ export function RootNavigator() {
                             initialParams={{ mode: "direct" }}
                         />
                         <Stack.Screen name="Chat" component={ChatRouteScreen} />
+                        <Stack.Screen name="Profile" component={ProfileScreen} />
                     </>
                 ) : (
-                    <Stack.Screen name="Login" component={LoginScreen} />
+                    <>
+                        <Stack.Screen name="Login" component={LoginScreen} />
+                        <Stack.Screen name="Register" component={RegisterScreen} />
+                    </>
                 )}
             </Stack.Navigator>
         </NavigationContainer>

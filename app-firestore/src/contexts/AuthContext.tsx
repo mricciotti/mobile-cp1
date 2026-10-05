@@ -2,11 +2,11 @@ import { createContext, ReactNode, useCallback, useEffect, useMemo, useState } f
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { logout as logoutService } from "../services/authService";
-import { getUserProfile } from "../services/userService";
-import { ChatUser } from "../types/user";
+import { getOwnCompleteProfile } from "../services/userService";
+import { PublicUser } from "../types/user";
 
 interface AuthContextValue {
-    user: ChatUser | null;
+    user: PublicUser | null;
     loading: boolean;
     logout: () => Promise<void>;
 }
@@ -18,7 +18,7 @@ function getCreatedAt(creationTime: string | undefined): number {
 }
 
 export function AuthContextProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<ChatUser | null>(null);
+    const [user, setUser] = useState<PublicUser | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -30,18 +30,13 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
             }
 
             try {
-                const profile = await getUserProfile(firebaseUser.uid);
-                setUser(
-                    profile ?? {
-                        uid: firebaseUser.uid,
-                        name: firebaseUser.displayName ?? firebaseUser.email ?? "Usuário",
-                        email: firebaseUser.email ?? "",
-                        phoneNumber: firebaseUser.phoneNumber ?? "",
-                        birthDate: "",
-                        photoUrl: firebaseUser.photoURL ?? "",
-                        createdAt: getCreatedAt(firebaseUser.metadata.creationTime),
-                    }
-                );
+                const profile = await getOwnCompleteProfile(firebaseUser.uid);
+                setUser(profile ?? {
+                    uid: firebaseUser.uid,
+                    name: firebaseUser.displayName ?? "Usuário",
+                    photoUrl: firebaseUser.photoURL ?? "",
+                    createdAt: getCreatedAt(firebaseUser.metadata.creationTime),
+                });
             } catch (error) {
                 console.error(error);
                 setUser(null);

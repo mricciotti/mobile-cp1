@@ -6,50 +6,60 @@ import {
     User as FirebaseUser,
 } from "firebase/auth";
 import { auth } from "../config/firebase";
-import { ChatUser } from "../types/user";
-import { getUserProfile, saveUserProfile } from "./userService";
+import { CompleteUserProfile, PublicUser } from "../types/user";
+import { createProfile, getOwnCompleteProfile, getPublicUser } from "./userService";
 
 function getCreatedAt(firebaseUser: FirebaseUser): number {
     const creationTime = firebaseUser.metadata.creationTime;
     return creationTime ? Date.parse(creationTime) : Date.now();
 }
 
-function toChatUser(firebaseUser: FirebaseUser): ChatUser {
+function toPublicUser(firebaseUser: FirebaseUser): PublicUser {
     return {
         uid: firebaseUser.uid,
         name: firebaseUser.displayName ?? firebaseUser.email ?? "Usuário",
-        email: firebaseUser.email ?? "",
-        phoneNumber: firebaseUser.phoneNumber ?? "",
-        birthDate: "",
         photoUrl: firebaseUser.photoURL ?? "",
         createdAt: getCreatedAt(firebaseUser),
     };
 }
 
-export async function registerWithEmail(name: string, email: string, password: string): Promise<ChatUser> {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName: name });
+export type RegistrationProfile = {
+    name: string;
+    email: string;
+    password: string;
+    phoneNumber: string;
+    birthDate: string;
+    photoUrl: string;
+};
 
-    const chatUser: ChatUser = {
-        ...toChatUser(credential.user),
-        name,
-    };
-
-    await saveUserProfile(chatUser);
-    return chatUser;
+export async function registerWithEmail(profile: RegistrationProfile): Promise<CompleteUserProfile> {
+    const credential = await createUserWithEmailAndPassword(auth, profile.email, profile.password);
+    await updateProfile(credential.user, { displayName: profile.name, photoURL: profile.photoUrl || null });
+    return createProfile(credential.user.uid, {
+        name: profile.name,
+        photoUrl: profile.photoUrl,
+        createdAt: getCreatedAt(credential.user),
+    }, {
+        email: credential.user.email ?? profile.email,
+        phoneNumber: profile.phoneNumber,
+        birthDate: profile.birthDate,
+    });
 }
 
-export async function loginWithEmail(email: string, password: string): Promise<ChatUser> {
+export async function loginWithEmail(email: string, password: string): Promise<CompleteUserProfile> {
     const credential = await signInWithEmailAndPassword(auth, email, password);
-    const existingProfile = await getUserProfile(credential.user.uid);
+    const existingProfile = await getOwnCompleteProfile(credential.user.uid);
 
     if (existingProfile) {
         return existingProfile;
     }
 
-    const chatUser = toChatUser(credential.user);
-    await saveUserProfile(chatUser);
-    return chatUser;
+    const publicProfile = await getPublicUser(credential.user.uid);
+    return createProfile(credential.user.uid, publicProfile ?? toPublicUser(credential.user), {
+        email: credential.user.email ?? email,
+        phoneNumber: credential.user.phoneNumber ?? "",
+        birthDate: "",
+    });
 }
 
 export async function logout(): Promise<void> {

@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function publicUserFields(data) {
+      return data.keys().hasAll(['name', 'photoUrl', 'createdAt'])
+        && data.keys().hasOnly(['name', 'photoUrl', 'createdAt']);
+    }
+
+    match /users/{uid} {
+      // This document is public profile data only. Legacy mixed documents are
+      // deliberately unreadable until migrated into the private subcollection.
+      allow get: if signedIn()
+        && (request.auth.uid == uid || publicUserFields(resource.data));
+      allow list: if false;
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && publicUserFields(request.resource.data);
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && publicUserFields(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'photoUrl', 'uid', 'email', 'phoneNumber', 'birthDate'
+        ]);
+      allow delete: if false;
+
+      match /private/profile {
+        // Clients may access only their own private profile. Admin SDK access
+        // is reserved for authenticated API endpoints that verify relationships.
+        allow get: if signedIn() && request.auth.uid == uid;
+        allow list: if false;
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasAll(['email', 'phoneNumber', 'birthDate'])
+          && request.resource.data.keys().hasOnly(['email', 'phoneNumber', 'birthDate']);
+        allow delete: if false;
+      }
+    }
+
+    // Searchable projection for UsersScreen; contains public fields only.
+    match /publicUsers/{uid} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasAll(['uid', 'name', 'photoUrl', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'photoUrl', 'createdAt']);
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'photoUrl', 'createdAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoUrl']);
+      allow delete: if false;
+    }
+
+    // Legacy directory documents contained email. Client access stays closed.
+    match /userDirectory/{uid} {
+      allow read, write: if false;
+    }
+
+    // Group rules are added with the group feature; memberLimit must be checked
+    // here in addition to the client and its Firestore transaction.
+    match /groups/{groupId} {
+      allow read, write: if false;
+    }
+  }
+}
