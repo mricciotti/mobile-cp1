@@ -55,24 +55,25 @@ The client sends the Firebase ID token in `Authorization: Bearer ...`. Only thes
 - protected private-profile reads, after direct/group relationship checks;
 - synchronization of Firestore-authoritative membership into RTDB `conversationMembers`.
 
-The mobile API client defines only these request contracts:
+The mobile API client defines these request contracts:
 
 | Contract | Request | Server authorization and source of truth |
 | --- | --- | --- |
 | `GET /users/{uid}/private-profile` | Firebase ID token | Verify a shared direct conversation or group in Firestore, then return the private fields. |
 | `POST /groups/{groupId}/membership/sync` | Firebase ID token; empty body | Verify the caller owns the group, read committed `memberIds` from Firestore, then replace the RTDB membership mirror. |
 | `POST /direct-conversations/{conversationId}/membership/sync` | Firebase ID token; empty body | Verify the caller is a participant, read `participantIds` from Firestore, then replace the RTDB membership mirror. |
+| `POST /notifications/messages` | Firebase ID token; `conversationId` and `messageId` only | Load the RTDB message, verify its sender, derive recipients from Firestore membership and notification policy, and persist per-device Expo delivery records. |
 
-The push endpoint remains within the same API boundary. These server routes are not implemented in this checkpoint; add them with the corresponding profile, relationship, and group flows. Do not add general-purpose profile, group, or conversation CRUD endpoints.
+These routes are implemented in `server/` as a Node.js/TypeScript Express API for Vercel. Firebase Admin credentials are configured only through server environment variables. The push endpoint reads device tokens from `users/{uid}/devices/{deviceId}`; records contain `expoPushToken` and may use `enabled`/`active` to disable delivery. Idempotency records are stored under `notificationDeliveries/{messageId}/devices/{sha256-token}`. Expo acceptance tickets are persisted; device receipt polling is not part of the current endpoint scope. Do not add general-purpose profile, group, or conversation CRUD endpoints.
 
 ## Implementation order
 
 1. Keep public/private profile persistence and rules aligned; complete owner migration for existing records.
-2. Add the authenticated API routes for protected profile reads and membership synchronization when their consuming UI/service flows are added.
+2. Use the authenticated API routes for protected profile reads and membership synchronization in the corresponding UI/service flows.
 3. Implement direct/group Firestore domain services and transactions. Group membership writes call the API only after transaction commit.
 4. Move new RTDB message authorization to `conversationMembers`, retaining the CP1 direct-chat bridge until migration.
-5. Add push delivery within the same minimal API boundary.
+5. Invoke push delivery after new RTDB messages are committed; keep recipient selection and delivery idempotency on the server.
 
 ## Current Phase 3 start
 
-The first Phase 3 foundation now includes the Firestore conversation list, deterministic direct-conversation creation, group validation, and transaction-based group domain operations. The client calls the membership-sync API contracts only after Firestore commits. The server routes and group creation/administration UI are still pending; the existing chat screen continues to use the CP1 bridges until the full migration is ready.
+The first Phase 3 foundation now includes the Firestore conversation list, deterministic direct-conversation creation, group validation, and transaction-based group domain operations. The server routes are implemented; app notification invocation and group creation/administration UI are still pending. The existing chat screen continues to use the CP1 bridges until the full migration is ready.
