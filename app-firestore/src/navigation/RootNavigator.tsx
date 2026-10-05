@@ -13,6 +13,7 @@ import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterScreen } from "../screens/RegisterScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { UsersScreen } from "../screens/UsersScreen";
+import { ConversationsScreen } from "../screens/ConversationsScreen";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
 import { RootStackParamList } from "./types";
@@ -104,11 +105,8 @@ export function RootNavigator() {
             >
                 {user ? (
                     <>
-                        <Stack.Screen
-                            name="Users"
-                            component={UsersScreen}
-                            initialParams={{ mode: "direct" }}
-                        />
+                        <Stack.Screen name="Conversations" component={ConversationsScreen} />
+                        <Stack.Screen name="Users" component={UsersScreen} initialParams={{ mode: "direct" }} />
                         <Stack.Screen name="Chat" component={ChatRouteScreen} />
                         <Stack.Screen name="Profile" component={ProfileScreen} />
                     </>

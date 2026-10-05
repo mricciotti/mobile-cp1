@@ -24,7 +24,7 @@ The legacy Realtime Database `users/` path is closed to client reads and writes;
 
 Older CP1/CP2 mixed `users/{uid}` documents are migrated only by their owner: on sign-in, the client moves email, phone, and birth date into `private/profile`, rewrites the public document, and refreshes `publicUsers` in one Firestore batch. Rules allow the owner to read that owner's legacy document for this migration; other clients can read only documents containing the public fields. No directory query reads the legacy document collection.
 
-Other users' private profiles must be fetched through the authenticated API. The API verifies that the caller and target share a direct conversation or group before returning private fields. The client must not read another user's `private/profile` document.
+Other users' private profiles must be fetched through `getRelatedPrivateProfile` in the authenticated API service. `ProfileScreen` will use this function for third-party profiles after the API verifies that the caller and target share a direct conversation or group. The client must not read another user's `private/profile` document.
 
 ## Conversation membership authorization
 
@@ -61,6 +61,7 @@ The mobile API client defines only these request contracts:
 | --- | --- | --- |
 | `GET /users/{uid}/private-profile` | Firebase ID token | Verify a shared direct conversation or group in Firestore, then return the private fields. |
 | `POST /groups/{groupId}/membership/sync` | Firebase ID token; empty body | Verify the caller owns the group, read committed `memberIds` from Firestore, then replace the RTDB membership mirror. |
+| `POST /direct-conversations/{conversationId}/membership/sync` | Firebase ID token; empty body | Verify the caller is a participant, read `participantIds` from Firestore, then replace the RTDB membership mirror. |
 
 The push endpoint remains within the same API boundary. These server routes are not implemented in this checkpoint; add them with the corresponding profile, relationship, and group flows. Do not add general-purpose profile, group, or conversation CRUD endpoints.
 
@@ -71,3 +72,7 @@ The push endpoint remains within the same API boundary. These server routes are 
 3. Implement direct/group Firestore domain services and transactions. Group membership writes call the API only after transaction commit.
 4. Move new RTDB message authorization to `conversationMembers`, retaining the CP1 direct-chat bridge until migration.
 5. Add push delivery within the same minimal API boundary.
+
+## Current Phase 3 start
+
+The first Phase 3 foundation now includes the Firestore conversation list, deterministic direct-conversation creation, group validation, and transaction-based group domain operations. The client calls the membership-sync API contracts only after Firestore commits. The server routes and group creation/administration UI are still pending; the existing chat screen continues to use the CP1 bridges until the full migration is ready.

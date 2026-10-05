@@ -10,6 +10,47 @@ service cloud.firestore {
         && data.keys().hasOnly(['name', 'photoUrl', 'createdAt']);
     }
 
+    function legacyUserProfileCleanup() {
+      return resource.data.keys().hasAny(['uid', 'email', 'phoneNumber', 'birthDate'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'uid', 'email', 'phoneNumber', 'birthDate'
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'photoUrl', 'uid', 'email', 'phoneNumber', 'birthDate'
+        ]);
+    }
+
+    function validNotificationPolicy(policy) {
+      return policy in [
+        'all_group_messages', 'mentioned_members',
+        'direct_messages_only', 'disabled'
+      ];
+    }
+
+    function validGroup(data) {
+      return data.keys().hasAll([
+          'id', 'name', 'photoUrl', 'ownerId', 'memberIds', 'memberLimit',
+          'notificationPolicy', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'name', 'photoUrl', 'ownerId', 'memberIds', 'memberLimit',
+          'notificationPolicy', 'createdAt', 'updatedAt'
+        ])
+        && data.name is string
+        && data.photoUrl is string
+        && data.ownerId is string
+        && data.memberIds is list
+        && data.memberIds.toSet().size() == data.memberIds.size()
+        && data.memberIds.size() >= 2
+        && data.memberIds.hasAny([data.ownerId])
+        && data.memberLimit is int
+        && data.memberLimit >= data.memberIds.size()
+        && data.notificationPolicy is string
+        && validNotificationPolicy(data.notificationPolicy)
+        && data.createdAt is int
+        && data.updatedAt is int;
+    }
+
     match /users/{uid} {
       // This document is public profile data only. Legacy mixed documents are
       // deliberately unreadable until migrated into the private subcollection.
@@ -22,9 +63,11 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.auth.uid == uid
         && publicUserFields(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'photoUrl', 'uid', 'email', 'phoneNumber', 'birthDate'
-        ]);
+        && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoUrl'])
+          // One-time owner-only removal of fields from the previous mixed schema.
+          || legacyUserProfileCleanup()
+        );
       allow delete: if false;
 
       match /private/profile {
@@ -61,10 +104,35 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Group rules are added with the group feature; memberLimit must be checked
-    // here in addition to the client and its Firestore transaction.
+    match /directConversations/{conversationId} {
+      allow get, list: if signedIn() && resource.data.participantIds.hasAny([request.auth.uid]);
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['id', 'type', 'participantIds', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['id', 'type', 'participantIds', 'createdAt'])
+        && request.resource.data.id == conversationId
+        && request.resource.data.type == 'direct'
+        && request.resource.data.participantIds is list
+        && request.resource.data.participantIds.size() == 2
+        && request.resource.data.participantIds.toSet().size() == 2
+        && request.resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.participantIds[0] < request.resource.data.participantIds[1]
+        && conversationId == request.resource.data.participantIds[0] + '_' + request.resource.data.participantIds[1]
+        && request.resource.data.createdAt is int;
+      allow update, delete: if false;
+    }
+
     match /groups/{groupId} {
-      allow read, write: if false;
+      allow get, list: if signedIn() && resource.data.memberIds.hasAny([request.auth.uid]);
+      allow create: if signedIn()
+        && validGroup(request.resource.data)
+        && request.resource.data.id == groupId
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.id == groupId
+        && validGroup(request.resource.data);
+      allow delete: if false;
     }
   }
 }

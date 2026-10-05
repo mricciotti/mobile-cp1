@@ -26,8 +26,6 @@ export const colors = {
     receivedBubble: "#1B2233",
 
     badgePassword: "#57607A",
-    badgeGoogle: "#3DDCFF",
-    badgeApple: "#C9CEDA",
 
     white: "#FFFFFF",
     black: "#000000",

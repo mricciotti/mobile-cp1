@@ -10,6 +10,9 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
 import { colors, radius, spacing } from "../theme/theme";
 
+// Third-party profiles must use apiService.getRelatedPrivateProfile once the
+// authenticated relationship-checking API route is implemented.
+
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
 export function ProfileScreen({ route, navigation }: Props) {

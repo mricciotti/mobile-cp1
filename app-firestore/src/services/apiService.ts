@@ -54,3 +54,15 @@ export async function syncGroupConversationMembers(groupId: string): Promise<Mem
     }
     return { synced: true };
 }
+
+/** Direct-conversation membership also comes from Firestore; clients never write the RTDB index. */
+export async function syncDirectConversationMembers(conversationId: string): Promise<MembershipSyncResponse> {
+    const payload = await authenticatedApiRequest(
+        `/direct-conversations/${encodeURIComponent(conversationId)}/membership/sync`,
+        { method: "POST", body: "{}" }
+    );
+    if (!isRecord(payload) || payload.synced !== true) {
+        throw new Error("A API não confirmou a sincronização dos participantes.");
+    }
+    return { synced: true };
+}
