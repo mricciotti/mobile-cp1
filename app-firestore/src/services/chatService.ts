@@ -9,18 +9,19 @@ interface MessageRecord {
     text?: string;
     conversationType?: "direct" | "group";
     target?: ChatMessage["target"];
-    mentionedUserIds?: string[];
+    mentionedUserIds?: string[] | null;
     createdAt?: number;
 }
 
 function isCurrentMessage(record: MessageRecord, conversationId: string): boolean {
     const target = record.target;
+    const mentionedUserIds = record.mentionedUserIds ?? [];
     return record.conversationId === conversationId
         && (record.conversationType === "direct" || record.conversationType === "group")
         && typeof record.senderId === "string"
         && typeof record.text === "string"
-        && Array.isArray(record.mentionedUserIds)
-        && record.mentionedUserIds.every((uid) => typeof uid === "string")
+        && Array.isArray(mentionedUserIds)
+        && mentionedUserIds.every((uid) => typeof uid === "string")
         && typeof record.createdAt === "number"
         && (target?.type === "conversation"
             || (target?.type === "member" && typeof target.memberId === "string"));
@@ -79,7 +80,7 @@ export function subscribeToMessages(
                 conversationType: record.conversationType as "direct" | "group",
                 senderId: record.senderId as string,
                 target: record.target as ChatMessage["target"],
-                mentionedUserIds: record.mentionedUserIds as string[],
+                mentionedUserIds: record.mentionedUserIds ?? [],
                 text: record.text as string,
                 createdAt: record.createdAt as number,
             }))
