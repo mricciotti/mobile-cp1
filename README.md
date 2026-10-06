@@ -78,6 +78,8 @@ Essas são configurações públicas usadas pelo frontend. Não coloque API Secr
 - Fotos de perfil e fotos de grupo são escolhidas do dispositivo e enviadas somente no momento de salvar.
 - Base64 e API Secret não são usados no app.
 
+O Cloudinary é utilizado exclusivamente para armazenamento das fotos de perfil e de grupo. Autenticação, usuários, conversas, grupos e mensagens continuam sob responsabilidade do Firebase.
+
 ## API
 
 API pública:
@@ -276,6 +278,8 @@ Ainda não foi incluído um print de push: a captura precisa ser feita após uma
 - RM555189 — Matheus Bortolotto
 
 ## Entrega
+
+Frontend Web: https://mobile-cp2-web.vercel.app
 
 GitHub: https://github.com/mricciotti/mobile-cp1
 
