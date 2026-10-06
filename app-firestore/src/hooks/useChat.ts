@@ -13,11 +13,20 @@ export function useChat(currentUserId: string, conversationId: string, conversat
         setError(null);
         setMessages([]);
 
-        const unsubscribe = subscribeToMessages(conversationId, (updatedMessages) => {
-            if (!active) return;
-            setMessages(updatedMessages);
-            setLoading(false);
-        });
+        const unsubscribe = subscribeToMessages(
+            conversationId,
+            (updatedMessages) => {
+                if (!active) return;
+                setMessages(updatedMessages);
+                setLoading(false);
+            },
+            (reason) => {
+                if (!active) return;
+                console.error(reason);
+                setError(reason instanceof Error ? reason.message : "Não foi possível carregar as mensagens.");
+                setLoading(false);
+            }
+        );
 
         return () => {
             active = false;
@@ -36,7 +45,7 @@ export function useChat(currentUserId: string, conversationId: string, conversat
             await sendMessage(conversationId, currentUserId, text, conversationType);
         } catch (reason) {
             console.error(reason);
-            setError(reason instanceof Error ? reason.message : "NÃ£o foi possÃ­vel enviar a mensagem.");
+            setError(reason instanceof Error ? reason.message : "Não foi possível enviar a mensagem.");
         }
     }, [conversationId, currentUserId, conversationType]);
 

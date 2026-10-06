@@ -38,7 +38,7 @@ export async function sendMessage(
     if (!trimmedText) return "";
 
     const newMessageRef = push(ref(database, `messages/${conversationId}`));
-    if (!newMessageRef.key) throw new Error("NÃ£o foi possÃ­vel criar o identificador da mensagem.");
+    if (!newMessageRef.key) throw new Error("Não foi possível criar o identificador da mensagem.");
 
     await set(newMessageRef, {
         conversationId,
@@ -56,7 +56,8 @@ export async function sendMessage(
 
 export function subscribeToMessages(
     conversationId: string,
-    callback: (messages: ChatMessage[]) => void
+    callback: (messages: ChatMessage[]) => void,
+    onError: (error: Error) => void
 ): () => void {
     const messagesRef = ref(database, `messages/${conversationId}`);
     const listener = onValue(messagesRef, (snapshot) => {
@@ -81,7 +82,7 @@ export function subscribeToMessages(
             .sort((a, b) => a.createdAt - b.createdAt);
 
         callback(messages);
-    });
+    }, onError);
 
     return () => off(messagesRef, "value", listener);
 }
