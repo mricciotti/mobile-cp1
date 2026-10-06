@@ -5,7 +5,7 @@ import {
     getDocs,
     onSnapshot,
     query,
-    runTransaction,
+    setDoc,
     where,
 } from "firebase/firestore";
 import type { DocumentData, QuerySnapshot } from "firebase/firestore";
@@ -60,6 +60,31 @@ type RealtimeMessageRecord = {
 };
 
 type ConversationSnapshot = QuerySnapshot<DocumentData>;
+
+function parseDirectConversation(
+    conversationId: string,
+    data: DocumentData,
+    participantIds: [string, string],
+): DirectConversation | null {
+    const storedParticipants = data.participantIds;
+    if (
+        data.id !== conversationId
+        || data.type !== "direct"
+        || !Array.isArray(storedParticipants)
+        || storedParticipants.length !== 2
+        || storedParticipants[0] !== participantIds[0]
+        || storedParticipants[1] !== participantIds[1]
+        || typeof data.createdAt !== "number"
+    ) {
+        return null;
+    }
+    return {
+        id: conversationId,
+        type: "direct",
+        participantIds,
+        createdAt: data.createdAt,
+    };
+}
 
 function timestampValue(value: unknown): number {
     if (typeof value === "number") return value;
@@ -145,40 +170,45 @@ export async function getOrCreateDirectConversation(uidA: string, uidB: string):
     const participantIds = [uidA, uidB].sort() as [string, string];
     const conversationId = buildConversationId(uidA, uidB);
     const conversationRef = doc(firestore, "directConversations", conversationId);
-    const createdAt = Date.now();
+    const findExistingConversation = async (): Promise<DirectConversation | null> => {
+        const snapshot = await getDocs(
+            query(
+                collection(firestore, "directConversations"),
+                where("participantIds", "array-contains", uidA),
+            ),
+        );
+        const existing = snapshot.docs.find((candidate) => candidate.id === conversationId);
+        if (!existing) return null;
+        const conversation = parseDirectConversation(conversationId, existing.data(), participantIds);
+        if (!conversation) throw new Error("Os dados da conversa individual estão inconsistentes.");
+        return conversation;
+    };
 
-    const conversation = await runTransaction(firestore, async (transaction) => {
-        const snapshot = await transaction.get(conversationRef);
-        if (snapshot.exists()) {
-            const data = snapshot.data();
-            const storedParticipants = data.participantIds;
-            if (
-                data.type !== "direct" ||
-                !Array.isArray(storedParticipants) ||
-                storedParticipants.length !== 2 ||
-                storedParticipants[0] !== participantIds[0] ||
-                storedParticipants[1] !== participantIds[1]
-            ) {
-                throw new Error("Os dados da conversa individual estão inconsistentes.");
-            }
-            return {
-                id: conversationId,
-                type: "direct" as const,
-                participantIds,
-                createdAt: typeof data.createdAt === "number" ? data.createdAt : createdAt,
-            };
-        }
+    const existingConversation = await findExistingConversation();
+    if (existingConversation) {
+        return syncAndReturnDirectConversation(existingConversation);
+    }
 
-        const newConversation: DirectConversation = {
-            id: conversationId,
-            type: "direct",
-            participantIds,
-            createdAt,
-        };
-        transaction.set(conversationRef, newConversation);
-        return newConversation;
-    });
+    const newConversation: DirectConversation = {
+        id: conversationId,
+        type: "direct",
+        participantIds,
+        createdAt: Date.now(),
+    };
 
+    try {
+        await setDoc(conversationRef, newConversation);
+        return syncAndReturnDirectConversation(newConversation);
+    } catch (createReason: unknown) {
+        // Outra tentativa pode ter criado o mesmo ID entre a query e o setDoc.
+        // Reconsultar a coleção mantém a leitura dentro das regras permitidas.
+        const concurrentConversation = await findExistingConversation();
+        if (!concurrentConversation) throw createReason;
+        return syncAndReturnDirectConversation(concurrentConversation);
+    }
+}
+
+async function syncAndReturnDirectConversation(conversation: DirectConversation): Promise<DirectConversation> {
     // Firestore is authoritative. RTDB is updated only through the authenticated API.
     await syncDirectConversationMembers(conversation.id);
     return conversation;

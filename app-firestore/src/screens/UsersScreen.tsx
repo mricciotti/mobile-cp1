@@ -32,13 +32,22 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
         let active = true;
         setLoading(true);
         setError("");
-        Promise.all([searchUsers(search), route.params.mode === "direct" ? listUserConversations(user.uid) : Promise.resolve([])])
+        const conversationsPromise = route.params.mode === "direct"
+            ? listUserConversations(user.uid).catch((reason: unknown) => {
+                // A stale/legacy inbox document must not prevent a user from
+                // starting a new direct conversation from the contacts list.
+                console.warn("Não foi possível filtrar conversas existentes.", reason);
+                return [];
+            })
+            : Promise.resolve([]);
+
+        Promise.all([searchUsers(search), conversationsPromise])
         .then(([matches, conversations]) => {
             if (!active) return;
             const existingDirectParticipantIds = new Set(
-                conversations
-                    .filter((conversation) => conversation.type === "direct")
-                    .map((conversation) => conversation.otherParticipantId),
+                conversations.flatMap((conversation) => (
+                    conversation.type === "direct" ? [conversation.otherParticipantId] : []
+                )),
             );
             setContacts(matches.filter((contact) => (
                 contact.uid !== user.uid
