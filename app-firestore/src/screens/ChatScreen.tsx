@@ -20,15 +20,17 @@ interface ChatScreenProps {
     title: string;
     photoUrl?: string;
     mentionableUsers?: PublicUser[];
+    memberProfiles?: Record<string, PublicUser>;
     onBack: () => void;
     onMessages: () => void;
     onContacts: () => void;
     onNewGroup: () => void;
     onProfile: () => void;
     onLogout: () => void;
+    onOpenInfo: () => void;
 }
 
-export function ChatScreen({ currentUser, conversationId, conversationType, title, photoUrl, mentionableUsers, onBack, onMessages, onContacts, onNewGroup, onProfile, onLogout }: ChatScreenProps) {
+export function ChatScreen({ currentUser, conversationId, conversationType, title, photoUrl, mentionableUsers, memberProfiles = {}, onBack, onMessages, onContacts, onNewGroup, onProfile, onLogout, onOpenInfo }: ChatScreenProps) {
     const { messages, loading, error, sendText } = useChat(currentUser.uid, conversationId, conversationType);
     const listRef = useRef<FlatList<ChatMessage>>(null);
 
@@ -54,14 +56,16 @@ export function ChatScreen({ currentUser, conversationId, conversationType, titl
                     <Pressable onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}>
                         <Text style={styles.backArrow}>‹</Text>
                     </Pressable>
-                    <Avatar photoUrl={photoUrl} name={title} size={38} />
-                    <View style={styles.headerInfo}>
+                    <Pressable onPress={onOpenInfo} style={styles.headerTarget}>
+                        <Avatar photoUrl={photoUrl} name={title} size={38} />
+                        <View style={styles.headerInfo}>
                         <Text style={styles.title} numberOfLines={1}>{title}</Text>
                         <View style={styles.statusRow}>
                             <View style={styles.statusDot} />
                             <Text style={styles.statusText}>{conversationType === "group" ? "grupo" : "tempo real"}</Text>
                         </View>
-                    </View>
+                        </View>
+                    </Pressable>
                 </View>
 
                 {error ? <View style={styles.errorWrapper}><ErrorMessage message={error} /></View> : null}
@@ -79,7 +83,13 @@ export function ChatScreen({ currentUser, conversationId, conversationType, titl
                                 <Text style={styles.emptyText}>Envie a primeira mensagem.</Text>
                             </View>
                         }
-                        renderItem={({ item }) => <ChatMessageComponent message={item} isOwnMessage={item.senderId === currentUser.uid} />}
+                        renderItem={({ item }) => (
+                            <ChatMessageComponent
+                                message={item}
+                                isOwnMessage={item.senderId === currentUser.uid}
+                                senderName={conversationType === "group" ? (memberProfiles[item.senderId]?.name ?? "Usuario") : undefined}
+                            />
+                        )}
                     />
                 )}
                 <ChatInput currentUserId={currentUser.uid} mentionableUsers={conversationType === "group" ? mentionableUsers : []} onSend={sendText} disabled={loading} />
@@ -97,6 +107,7 @@ const styles = StyleSheet.create({
     backButtonPressed: { opacity: 0.7 },
     backArrow: { color: colors.primary, fontSize: 22, fontWeight: "700", marginLeft: -2 },
     headerInfo: { flex: 1, gap: 2 },
+    headerTarget: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, minWidth: 0 },
     title: { fontSize: 16, fontWeight: "700", color: colors.text },
     statusRow: { flexDirection: "row", alignItems: "center", gap: 5 },
     statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success },

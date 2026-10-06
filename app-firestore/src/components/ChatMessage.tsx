@@ -5,6 +5,7 @@ import { ChatMessage as ChatMessageType } from "../types/chat";
 interface ChatMessageProps {
     message: ChatMessageType;
     isOwnMessage: boolean;
+    senderName?: string;
 }
 
 function formatTime(timestamp: number): string {
@@ -18,9 +19,10 @@ function formatTime(timestamp: number): string {
     return `${hours}:${minutes}`;
 }
 
-export function ChatMessage({ message, isOwnMessage }: ChatMessageProps) {
+export function ChatMessage({ message, isOwnMessage, senderName }: ChatMessageProps) {
     return (
         <View style={[styles.wrapper, isOwnMessage ? styles.wrapperOwn : styles.wrapperReceived]}>
+            {senderName ? <Text style={styles.senderName}>{senderName}</Text> : null}
             <View style={[styles.bubble, isOwnMessage ? styles.own : styles.received]}>
                 <Text style={isOwnMessage ? styles.ownText : styles.receivedText}>{message.text}</Text>
             </View>
@@ -43,6 +45,13 @@ const styles = StyleSheet.create({
     wrapperReceived: {
         alignSelf: "flex-start",
         alignItems: "flex-start",
+    },
+    senderName: {
+        color: colors.primary,
+        fontSize: 11,
+        fontWeight: "800",
+        marginHorizontal: 4,
+        marginBottom: 2,
     },
     bubble: {
         borderRadius: radius.lg,

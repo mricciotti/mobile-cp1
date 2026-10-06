@@ -18,6 +18,9 @@ export type RootStackParamList = {
     Profile: {
         userId: string;
     };
+    GroupInfo: {
+        groupId: string;
+    };
 };
 
 export type GroupDraft = Pick<

@@ -14,6 +14,7 @@ import { GroupFormScreen } from "../screens/GroupFormScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterScreen } from "../screens/RegisterScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import { GroupInfoScreen } from "../screens/GroupInfoScreen";
 import { UsersScreen } from "../screens/UsersScreen";
 import { ConversationsScreen } from "../screens/ConversationsScreen";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -31,6 +32,8 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
     const [title, setTitle] = useState("");
     const [photoUrl, setPhotoUrl] = useState("");
     const [mentionableUsers, setMentionableUsers] = useState<PublicUser[]>([]);
+    const [memberProfiles, setMemberProfiles] = useState<Record<string, PublicUser>>({});
+    const [directOtherUserId, setDirectOtherUserId] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +44,8 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
         setTitle("");
         setPhotoUrl("");
         setMentionableUsers([]);
+        setMemberProfiles({});
+        setDirectOtherUserId("");
 
         const loadConversationHeader = async () => {
             if (!user) return;
@@ -53,6 +58,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
                 if (active) {
                     setTitle(profile.name);
                     setPhotoUrl(profile.photoUrl);
+                    setDirectOtherUserId(otherId);
                 }
             } else {
                 const group = await getGroup(route.params.conversationId);
@@ -63,7 +69,9 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
                 if (active) {
                     setTitle(group.name);
                     setPhotoUrl(group.photoUrl);
-                    setMentionableUsers(profiles.flatMap((profile) => profile ? [profile] : []));
+                    const resolvedProfiles = profiles.flatMap((profile) => profile ? [profile] : []);
+                    setMentionableUsers(resolvedProfiles.filter((profile) => profile.uid !== user.uid));
+                    setMemberProfiles(Object.fromEntries(resolvedProfiles.map((profile) => [profile.uid, profile])));
                 }
             }
         };
@@ -92,12 +100,20 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
             title={title}
             photoUrl={photoUrl}
             mentionableUsers={mentionableUsers}
+            memberProfiles={memberProfiles}
             onBack={() => navigation.goBack()}
             onMessages={() => navigation.navigate("Conversations")}
             onContacts={() => navigation.navigate("Users", { mode: "direct" })}
             onNewGroup={() => navigation.navigate("GroupForm", {})}
             onProfile={() => navigation.navigate("Profile", { userId: user.uid })}
             onLogout={logout}
+            onOpenInfo={() => {
+                if (route.params.conversationType === "direct" && directOtherUserId) {
+                    navigation.navigate("Profile", { userId: directOtherUserId });
+                } else if (route.params.conversationType === "group") {
+                    navigation.navigate("GroupInfo", { groupId: route.params.conversationId });
+                }
+            }}
         />
     );
 }
@@ -139,6 +155,7 @@ export function RootNavigator() {
                         <Stack.Screen name="GroupForm" component={GroupFormScreen} />
                         <Stack.Screen name="Chat" component={ChatRouteScreen} />
                         <Stack.Screen name="Profile" component={ProfileScreen} />
+                        <Stack.Screen name="GroupInfo" component={GroupInfoScreen} />
                     </>
                 ) : (
                     <>

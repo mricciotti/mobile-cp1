@@ -1,11 +1,10 @@
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 import { FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../hooks/useAuth";
 import { RootStackParamList } from "../navigation/types";
-import { ConversationListEntry, listUserConversations } from "../services/conversationService";
+import { ConversationListEntry, subscribeUserConversations } from "../services/conversationService";
 import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -31,20 +30,21 @@ export function ConversationsScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    useFocusEffect(useCallback(() => {
+    useEffect(() => {
         if (!user) return;
         let active = true;
         setLoading(true);
         setError("");
-        listUserConversations(user.uid)
-            .then((conversations) => { if (active) setItems(conversations); })
-            .catch((reason: unknown) => {
+        subscribeUserConversations(user.uid,
+            (conversations) => { if (active) { setItems(conversations); setLoading(false); } },
+            (reason) => {
                 console.error(reason);
                 if (active) setError("Não foi possível carregar suas conversas.");
-            })
-            .finally(() => { if (active) setLoading(false); });
+                setLoading(false);
+            },
+        );
         return () => { active = false; };
-    }, [user]));
+    }, [user]);
 
     if (!user) return null;
 

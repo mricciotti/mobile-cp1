@@ -3,10 +3,12 @@ import {
     doc,
     getDoc,
     getDocs,
+    onSnapshot,
     query,
     runTransaction,
     where,
 } from "firebase/firestore";
+import type { DocumentData, QuerySnapshot } from "firebase/firestore";
 import { get as getRealtimeValue, ref } from "firebase/database";
 import { firestore } from "../config/firebase";
 import { database } from "../config/firebase";
@@ -56,6 +58,8 @@ type RealtimeMessageRecord = {
     mentionedUserIds?: string[] | null;
     createdAt?: number;
 };
+
+type ConversationSnapshot = QuerySnapshot<DocumentData>;
 
 function timestampValue(value: unknown): number {
     if (typeof value === "number") return value;
@@ -180,12 +184,12 @@ export async function getOrCreateDirectConversation(uidA: string, uidB: string):
     return conversation;
 }
 
-export async function listUserConversations(uid: string): Promise<ConversationListEntry[]> {
-    const [directSnapshot, groupSnapshot, readStateSnapshot] = await Promise.all([
-        getDocs(query(collection(firestore, "directConversations"), where("participantIds", "array-contains", uid))),
-        getDocs(query(collection(firestore, "groups"), where("memberIds", "array-contains", uid))),
-        getDocs(collection(firestore, "users", uid, "conversationState")),
-    ]);
+async function buildConversationEntries(
+    uid: string,
+    directSnapshot: ConversationSnapshot,
+    groupSnapshot: ConversationSnapshot,
+    readStateSnapshot: ConversationSnapshot,
+): Promise<ConversationListEntry[]> {
     const lastReadByConversation = new Map(
         readStateSnapshot.docs.map((snapshot) => [snapshot.id, timestampValue(snapshot.data().lastReadAt)]),
     );
@@ -242,4 +246,79 @@ export async function listUserConversations(uid: string): Promise<ConversationLi
         const bTime = b.lastMessageAt || b.createdAt;
         return bTime - aTime;
     });
+}
+
+export async function listUserConversations(uid: string): Promise<ConversationListEntry[]> {
+    const [directSnapshot, groupSnapshot, readStateSnapshot] = await Promise.all([
+        getDocs(query(collection(firestore, "directConversations"), where("participantIds", "array-contains", uid))),
+        getDocs(query(collection(firestore, "groups"), where("memberIds", "array-contains", uid))),
+        getDocs(collection(firestore, "users", uid, "conversationState")),
+    ]);
+    return buildConversationEntries(uid, directSnapshot, groupSnapshot, readStateSnapshot);
+}
+
+export function subscribeUserConversations(
+    uid: string,
+    onUpdate: (conversations: ConversationListEntry[]) => void,
+    onError: (error: Error) => void,
+): () => void {
+    let directSnapshot: ConversationSnapshot | null = null;
+    let groupSnapshot: ConversationSnapshot | null = null;
+    let readStateSnapshot: ConversationSnapshot | null = null;
+    let disposed = false;
+    let rebuildVersion = 0;
+
+    const rebuild = async () => {
+        if (disposed || !directSnapshot || !groupSnapshot || !readStateSnapshot) return;
+        const version = ++rebuildVersion;
+        try {
+            const conversations = await buildConversationEntries(
+                uid,
+                directSnapshot,
+                groupSnapshot,
+                readStateSnapshot,
+            );
+            if (!disposed && version === rebuildVersion) onUpdate(conversations);
+        } catch (reason: unknown) {
+            if (!disposed) {
+                onError(reason instanceof Error ? reason : new Error("Nao foi possivel atualizar suas conversas."));
+            }
+        }
+    };
+
+    const handleSnapshotError = (reason: Error) => {
+        if (!disposed) onError(reason);
+    };
+
+    const unsubscribeDirect = onSnapshot(
+        query(collection(firestore, "directConversations"), where("participantIds", "array-contains", uid)),
+        (snapshot) => {
+            directSnapshot = snapshot;
+            void rebuild();
+        },
+        handleSnapshotError,
+    );
+    const unsubscribeGroups = onSnapshot(
+        query(collection(firestore, "groups"), where("memberIds", "array-contains", uid)),
+        (snapshot) => {
+            groupSnapshot = snapshot;
+            void rebuild();
+        },
+        handleSnapshotError,
+    );
+    const unsubscribeReadState = onSnapshot(
+        collection(firestore, "users", uid, "conversationState"),
+        (snapshot) => {
+            readStateSnapshot = snapshot;
+            void rebuild();
+        },
+        handleSnapshotError,
+    );
+
+    return () => {
+        disposed = true;
+        unsubscribeDirect();
+        unsubscribeGroups();
+        unsubscribeReadState();
+    };
 }

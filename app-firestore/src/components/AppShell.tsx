@@ -62,7 +62,11 @@ export function AppShell({ user, activeSection, children, onMessages, onContacts
                                 onPress={actions[item.key]}
                                 style={({ pressed }) => [styles.navItem, activeSection === item.key && styles.navItemActive, pressed && styles.navItemPressed]}
                             >
-                                <Text style={[styles.navSymbol, activeSection === item.key && styles.navTextActive]}>{item.symbol}</Text>
+                                {item.key === "profile" ? (
+                                    <Avatar photoUrl={user.photoUrl} name={user.name} size={24} />
+                                ) : (
+                                    <Text style={[styles.navSymbol, activeSection === item.key && styles.navTextActive]}>{item.symbol}</Text>
+                                )}
                                 <Text style={[styles.navLabel, activeSection === item.key && styles.navTextActive]}>{item.label}</Text>
                             </Pressable>
                         ))}
@@ -84,10 +88,18 @@ export function AppShell({ user, activeSection, children, onMessages, onContacts
                     <View style={styles.mobileNavigation}>
                         {navigationItems.filter((item) => item.key !== "groups").map((item) => (
                             <Pressable key={item.key} onPress={actions[item.key]} style={styles.mobileNavItem}>
-                                <Text style={[styles.mobileNavSymbol, activeSection === item.key && styles.navTextActive]}>{item.symbol}</Text>
+                                {item.key === "profile" ? (
+                                    <Avatar photoUrl={user.photoUrl} name={user.name} size={20} />
+                                ) : (
+                                    <Text style={[styles.mobileNavSymbol, activeSection === item.key && styles.navTextActive]}>{item.symbol}</Text>
+                                )}
                                 <Text style={[styles.mobileNavLabel, activeSection === item.key && styles.navTextActive]}>{item.label}</Text>
                             </Pressable>
                         ))}
+                        <Pressable onPress={onLogout} style={styles.mobileNavItem}>
+                            <Text style={styles.mobileNavSymbol}>↪</Text>
+                            <Text style={styles.mobileNavLabel}>Sair</Text>
+                        </Pressable>
                     </View>
                 ) : null}
             </View>
