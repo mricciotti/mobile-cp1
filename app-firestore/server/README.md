@@ -2,6 +2,8 @@
 
 Node.js 22, TypeScript, Express, and Firebase Admin API. Set the Vercel project root to `server`; Vercel serves the exported Express app from `src/index.ts` at the domain root.
 
+The server stays ESM (`type: module`). Firebase Admin 14 currently resolves `jwks-rsa` with a CommonJS `require` path while the newest `jose` 6 release is ESM-only, so `overrides` pins the transitive `jose` dependency to `4.15.9`, which provides both import and require exports. The Node engine is fixed to `22.x` for Vercel.
+
 ## Endpoints
 
 | Method | Path | Authentication |

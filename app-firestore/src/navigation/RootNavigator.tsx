@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Platform } from "react-native";
 import { useAuth } from "../hooks/useAuth";
 import { getPublicUser } from "../services/userService";
 import { getDirectConversation } from "../services/conversationService";
@@ -94,6 +95,8 @@ export function RootNavigator() {
     const [pendingNotification, setPendingNotification] = useState<NotificationRoute | null>(null);
 
     useEffect(() => {
+        if (Platform.OS === "web") return;
+
         const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
             setPendingNotification(getNotificationRoute(response));
         });
