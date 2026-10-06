@@ -35,15 +35,20 @@ export function ConversationsScreen({ navigation }: Props) {
         let active = true;
         setLoading(true);
         setError("");
-        subscribeUserConversations(user.uid,
+        const unsubscribe = subscribeUserConversations(user.uid,
             (conversations) => { if (active) { setItems(conversations); setLoading(false); } },
             (reason) => {
                 console.error(reason);
-                if (active) setError("Não foi possível carregar suas conversas.");
-                setLoading(false);
+                if (active) {
+                    setError("Não foi possível carregar suas conversas.");
+                    setLoading(false);
+                }
             },
         );
-        return () => { active = false; };
+        return () => {
+            active = false;
+            unsubscribe();
+        };
     }, [user]);
 
     if (!user) return null;
