@@ -241,20 +241,31 @@ Antes de publicar, confirme o projeto Firebase selecionado no CLI e compare o co
 
 ## Prints da aplicação
 
-Não há screenshots finais versionados no repositório. Inserir, na entrega, prints reais de:
+As imagens abaixo foram capturadas da aplicação Expo Web em viewport mobile, com uma conta autenticada em `http://localhost:8081/`:
 
-- login e cadastro;
-- lista de conversas;
-- conversa direta;
-- grupo;
-- administração de grupo;
-- perfil;
-- autocomplete de menção;
-- push recebido.
+### Conversas e mensagens
+
+![Lista de conversas](app-firestore/docs/screenshots/01-conversations.png)
+
+![Conversa direta](app-firestore/docs/screenshots/02-group-chat.png)
+
+![Conversa de grupo com remetentes e menções](app-firestore/docs/screenshots/04-group-or-conversation.png)
+
+![Autocomplete de menções](app-firestore/docs/screenshots/08-mention-autocomplete.png)
+
+### Perfis e grupos
+
+![Perfil de contato](app-firestore/docs/screenshots/03-contact-profile.png)
+
+![Perfil próprio](app-firestore/docs/screenshots/06-own-profile.png)
+
+![Informações do grupo](app-firestore/docs/screenshots/05-group-info.png)
+
+![Administração do grupo](app-firestore/docs/screenshots/07-group-admin.png)
 
 ## Evidência de push
 
-Inserir um screenshot real de uma notificação recebida em dispositivo Android ou development build. O print deve mostrar a notificação e, se possível, a abertura da conversa correta após o toque. Não há evidência de push versionada neste repositório neste momento.
+Ainda não foi incluído um print de push: a captura precisa ser feita após uma notificação real chegar em um dispositivo Android ou development build. O print deve mostrar a notificação e, se possível, a abertura da conversa correta após o toque. Não foi criada evidência artificial.
 
 ## Integrantes
 
