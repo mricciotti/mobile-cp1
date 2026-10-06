@@ -12,7 +12,21 @@ export async function requireFirebaseAuth(
     const match = authorization?.match(/^Bearer\s+(\S+)$/i);
     const token = match?.[1];
     if (!token) throw new HttpError(401, "A Firebase ID token is required.");
-    req.firebaseUser = await getAdminServices().auth.verifyIdToken(token);
+
+    let adminAuth: ReturnType<typeof getAdminServices>["auth"];
+    try {
+      adminAuth = getAdminServices().auth;
+    } catch (error) {
+      const adminError = error as { code?: unknown; message?: unknown };
+      console.error("Firebase Admin initialization failed", {
+        code: adminError.code,
+        message: adminError.message,
+      });
+      sendError(res, new HttpError(500, "Firebase Admin server configuration is invalid."));
+      return;
+    }
+
+    req.firebaseUser = await adminAuth.verifyIdToken(token);
     next();
   } catch (error) {
     if (error instanceof HttpError) {
