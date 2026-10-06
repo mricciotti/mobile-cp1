@@ -19,6 +19,11 @@ export async function requireFirebaseAuth(
       sendError(res, error);
       return;
     }
+    const authError = error as { code?: unknown; message?: unknown };
+    console.error("Firebase ID token verification failed", {
+      code: authError.code,
+      message: authError.message,
+    });
     sendError(res, new HttpError(401, "The Firebase ID token is invalid or expired."));
   }
 }

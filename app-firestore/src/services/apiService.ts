@@ -27,8 +27,7 @@ async function authenticatedApiRequest(path: string, init: RequestInit = {}): Pr
     if (!API_BASE_URL) throw new Error("A URL da API nÃ£o estÃ¡ configurada.");
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error("Ã‰ necessÃ¡rio entrar novamente para continuar.");
-    const idToken = await currentUser.getIdToken();
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const requestWithToken = (idToken: string) => fetch(`${API_BASE_URL}${path}`, {
         ...init,
         headers: {
             Accept: "application/json",
@@ -37,6 +36,11 @@ async function authenticatedApiRequest(path: string, init: RequestInit = {}): Pr
             Authorization: `Bearer ${idToken}`,
         },
     });
+    let response = await requestWithToken(await currentUser.getIdToken());
+    if (response.status === 401 && auth.currentUser) {
+        // A Web session may have a stale token after a long-lived tab or HMR.
+        response = await requestWithToken(await auth.currentUser.getIdToken(true));
+    }
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) {
         const message = isRecord(payload) && typeof (payload as ApiErrorPayload).message === "string"
