@@ -50,7 +50,11 @@ export async function sendMessage(
         createdAt: serverTimestamp(),
     });
 
-    await notifyMessage(conversationId, newMessageRef.key);
+    try {
+        await notifyMessage(conversationId, newMessageRef.key);
+    } catch (reason) {
+        console.warn("Mensagem salva, mas a notificação push falhou.", reason);
+    }
     return newMessageRef.key;
 }
 

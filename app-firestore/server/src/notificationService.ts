@@ -11,7 +11,7 @@ type StoredMessage = {
   senderId?: string;
   text?: string;
   target?: MessageTarget;
-  mentionedUserIds?: string[];
+  mentionedUserIds?: string[] | null;
   createdAt?: number;
 };
 type Device = { id: string; token: string; ref: FirebaseFirestore.DocumentReference };
@@ -22,6 +22,7 @@ const deliveryLeaseMs = 60_000;
 function parseMessage(value: unknown, messageId: string, conversationId: string): StoredMessage {
   if (!value || typeof value !== "object") throw new HttpError(404, "Message not found.");
   const message = value as StoredMessage;
+  const mentionedUserIds = message.mentionedUserIds ?? [];
   const validTarget = message.target?.type === "conversation"
     || (message.target?.type === "member" && typeof message.target.memberId === "string");
   if (
@@ -30,14 +31,14 @@ function parseMessage(value: unknown, messageId: string, conversationId: string)
     || typeof message.senderId !== "string"
     || typeof message.text !== "string"
     || !validTarget
-    || !Array.isArray(message.mentionedUserIds)
-    || !message.mentionedUserIds.every((uid) => typeof uid === "string")
-    || new Set(message.mentionedUserIds).size !== message.mentionedUserIds.length
+    || !Array.isArray(mentionedUserIds)
+    || !mentionedUserIds.every((uid) => typeof uid === "string")
+    || new Set(mentionedUserIds).size !== mentionedUserIds.length
     || typeof message.createdAt !== "number"
   ) {
     throw new HttpError(409, "Stored message data is invalid.");
   }
-  return { ...message, id: messageId };
+  return { ...message, mentionedUserIds, id: messageId };
 }
 
 function deriveRecipientIds(message: StoredMessage, memberIds: string[], policy?: string): string[] {
@@ -53,7 +54,7 @@ function deriveRecipientIds(message: StoredMessage, memberIds: string[], policy?
       ? [target.memberId]
       : memberIds;
   } else {
-    const mentions = message.mentionedUserIds as string[];
+    const mentions = message.mentionedUserIds ?? [];
     if (mentions.some((uid) => !memberIds.includes(uid))) {
       throw new HttpError(409, "Message mentions a user outside the group.");
     }
@@ -201,7 +202,7 @@ export async function notifyMessage(
     if (typeof data.name === "string" && data.name) title = data.name;
   }
 
-  if ((message.mentionedUserIds as string[]).some((uid) => !memberIds.includes(uid))) {
+  if ((message.mentionedUserIds ?? []).some((uid) => !memberIds.includes(uid))) {
     throw new HttpError(409, "Message mentions a user outside the conversation.");
   }
 
