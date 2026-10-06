@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import { Platform } from "react-native";
 
 const CLOUDINARY_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -93,19 +94,31 @@ export async function uploadImage(asset: ImagePicker.ImagePickerAsset): Promise<
         throw new ImageServiceError("invalid-image", "Selecione um arquivo de imagem válido.");
     }
 
-    const mimeType = asset.mimeType ?? "image/jpeg";
-    const file: ReactNativeUploadFile = {
-        uri: asset.uri,
-        type: mimeType,
-        name: getFileName(asset),
-    };
-    const formData = new FormData();
-
-    formData.append("file", file as unknown as Blob);
-    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    formData.append("folder", CLOUDINARY_FOLDER);
-
     try {
+        const mimeType = asset.mimeType ?? "image/jpeg";
+        const fileName = getFileName(asset);
+        const formData = new FormData();
+
+        if (Platform.OS === "web") {
+            const assetResponse = await fetch(asset.uri);
+            if (!assetResponse.ok) {
+                throw new Error(`NÃ£o foi possÃ­vel ler a imagem selecionada (${assetResponse.status}).`);
+            }
+
+            const blob = await assetResponse.blob();
+            formData.append("file", blob, fileName);
+        } else {
+            const file: ReactNativeUploadFile = {
+                uri: asset.uri,
+                type: mimeType,
+                name: fileName,
+            };
+            formData.append("file", file as unknown as Blob);
+        }
+
+        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+        formData.append("folder", CLOUDINARY_FOLDER);
+
         const response = await fetch(
             `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
             {

@@ -7,6 +7,16 @@ import { getRelatedPrivateProfile } from "./profileService.js";
 
 const app = express();
 app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Accept, Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
+  }
+  next();
+});
 app.use(express.json({ limit: "16kb", strict: true }));
 
 app.get("/health", (_req: Request, res: Response) => {

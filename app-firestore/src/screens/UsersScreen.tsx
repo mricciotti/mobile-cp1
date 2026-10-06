@@ -9,6 +9,7 @@ import { RootStackParamList } from "../navigation/types";
 import { UserItem } from "../components/UserItem";
 import { Loading } from "../components/Loading";
 import { Button } from "../components/Button";
+import { ErrorMessage } from "../components/ErrorMessage";
 import { colors, radius, spacing } from "../theme/theme";
 import { PublicUser } from "../types/user";
 import { Avatar } from "../components/Avatar";
@@ -21,6 +22,7 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [openingUserId, setOpeningUserId] = useState<string | null>(null);
+    const [error, setError] = useState("");
 
     useEffect(() => {
         if (!user) {
@@ -28,12 +30,16 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
         }
         let active = true;
         setLoading(true);
+        setError("");
         searchUsers(search).then((matches) => {
             if (!active) return;
             setContacts(matches.filter((contact) => contact.uid !== user.uid));
         }).catch((error: unknown) => {
             console.error(error);
-            if (active) setContacts([]);
+            if (active) {
+                setContacts([]);
+                setError(error instanceof Error ? error.message : "NÃ£o foi possÃ­vel carregar os contatos.");
+            }
         }).finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
     }, [user, search]);
@@ -47,9 +53,9 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <Avatar photoUrl={user.photoUrl} name={user.name} size={44} />
-                    <View>
-                        <Text style={styles.eyebrow}>LOGADO COMO</Text>
-                        <Text style={styles.userName}>{user.name}</Text>
+                        <View style={styles.headerIdentityText}>
+                            <Text style={styles.eyebrow}>LOGADO COMO</Text>
+                            <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
                     </View>
                 </View>
                 <View style={styles.headerActions}>
@@ -59,6 +65,20 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
             </View>
 
             <Text style={styles.sectionTitle}>Contatos</Text>
+            <View style={styles.navigationActions}>
+                <Button
+                    title="Mensagens"
+                    variant="ghost"
+                    onPress={() => navigation.navigate("Conversations")}
+                    style={styles.backButton}
+                />
+                <Button
+                    title="Novo grupo"
+                    variant="outline"
+                    onPress={() => navigation.navigate("GroupForm", {})}
+                    style={styles.groupButton}
+                />
+            </View>
             <TextInput
                 value={search}
                 onChangeText={setSearch}
@@ -67,6 +87,7 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
                 autoCapitalize="none"
                 style={styles.searchInput}
             />
+            {error ? <View style={styles.error}><ErrorMessage message={error} /></View> : null}
 
             {loading ? (
                 <Loading />
@@ -97,6 +118,7 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
                                     });
                                 } catch (reason) {
                                     console.error(reason);
+                                    setError(reason instanceof Error ? reason.message : "NÃ£o foi possÃ­vel iniciar a conversa.");
                                 } finally {
                                     setOpeningUserId(null);
                                 }
@@ -119,7 +141,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: spacing.md,
+        gap: spacing.sm,
         paddingHorizontal: spacing.lg,
         paddingTop: spacing.md,
         paddingBottom: spacing.md,
@@ -130,14 +152,20 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
+        flex: 1,
         flexShrink: 1,
+    },
+    headerIdentityText: {
+        flex: 1,
+        minWidth: 0,
     },
     headerActions: {
         flexDirection: "row",
         gap: spacing.xs,
+        flexShrink: 0,
     },
     profileButton: {
-        width: 86,
+        width: 76,
     },
     eyebrow: {
         color: colors.textFaint,
@@ -151,7 +179,7 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
     logoutButton: {
-        width: 84,
+        width: 76,
     },
     sectionTitle: {
         color: colors.text,
@@ -160,6 +188,21 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.lg,
         paddingTop: spacing.lg,
         paddingBottom: spacing.sm,
+    },
+    navigationActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.sm,
+    },
+    backButton: {
+        flex: 1,
+        minWidth: 0,
+    },
+    groupButton: {
+        flex: 1,
+        minWidth: 0,
     },
     searchInput: {
         marginHorizontal: spacing.lg,
@@ -171,6 +214,10 @@ const styles = StyleSheet.create({
         color: colors.text,
         paddingHorizontal: spacing.md,
         paddingVertical: 12,
+    },
+    error: {
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.sm,
     },
     listContent: {
         paddingHorizontal: spacing.lg,

@@ -52,7 +52,9 @@ export function Button({ title, onPress, variant = "primary", disabled, loading,
 const styles = StyleSheet.create({
     base: {
         borderRadius: radius.md,
-        paddingVertical: 14,
+        minHeight: 50,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
@@ -61,6 +63,7 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
         gap: 8,
     },
     disabled: {
@@ -70,6 +73,8 @@ const styles = StyleSheet.create({
         fontSize: typography.button.fontSize,
         fontWeight: typography.button.fontWeight,
         letterSpacing: typography.button.letterSpacing,
+        textAlign: "center",
+        flexShrink: 1,
     },
 });
 

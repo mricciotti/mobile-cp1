@@ -1,7 +1,12 @@
 import { auth } from "../config/firebase";
 import { PrivateUserProfile } from "../types/user";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+const configuredApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const API_BASE_URL = configuredApiBaseUrl
+    && !configuredApiBaseUrl.includes("your-api.example.com")
+    && !configuredApiBaseUrl.includes("seu-projeto.vercel.app")
+    ? configuredApiBaseUrl.replace(/\/$/, "")
+    : undefined;
 
 type ApiErrorPayload = { message?: unknown };
 type MembershipSyncResponse = { synced: true };
