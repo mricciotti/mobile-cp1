@@ -3,6 +3,7 @@ import {
     doc,
     getDoc,
     runTransaction,
+    setDoc,
 } from "firebase/firestore";
 import { firestore } from "../config/firebase";
 import { ChatGroup, NotificationPolicy } from "../types/group";
@@ -19,7 +20,7 @@ export type CreateGroupInput = {
 
 export class MembershipSyncError extends Error {
     constructor(public readonly groupId: string) {
-        super("O grupo foi salvo, mas a sincronização do acesso falhou. Tente sincronizar novamente.");
+        super("O grupo foi salvo, mas a sincronizacao do acesso falhou. Tente sincronizar novamente.");
         this.name = "MembershipSyncError";
     }
 }
@@ -36,7 +37,7 @@ function parseGroup(id: string, data: Record<string, unknown>): ChatGroup {
         typeof data.createdAt !== "number" ||
         typeof data.updatedAt !== "number"
     ) {
-        throw new Error("Os dados do grupo estão inválidos.");
+        throw new Error("Os dados do grupo estao invalidos.");
     }
     return {
         id,
@@ -66,7 +67,7 @@ export async function createGroup(ownerId: string, input: CreateGroupInput): Pro
     const memberIds = Array.from(new Set([...input.memberIds, ownerId]));
     const membersError = validateGroupMembers(ownerId, memberIds, input.memberLimit);
     if (membersError) throw new Error(membersError);
-    if (!isNotificationPolicy(input.notificationPolicy)) throw new Error("A política de notificações é inválida.");
+    if (!isNotificationPolicy(input.notificationPolicy)) throw new Error("A politica de notificacoes e invalida.");
 
     const groupRef = doc(collection(firestore, "groups"));
     const timestamp = Date.now();
@@ -82,11 +83,10 @@ export async function createGroup(ownerId: string, input: CreateGroupInput): Pro
         updatedAt: timestamp,
     };
 
-    await runTransaction(firestore, async (transaction) => {
-        const snapshot = await transaction.get(groupRef);
-        if (snapshot.exists()) throw new Error("Não foi possível reservar um identificador único para o grupo.");
-        transaction.set(groupRef, group);
-    });
+    // The generated document ID is already unique. Reading it inside a
+    // transaction would require a group-member read rule before the document
+    // exists, so creation is intentionally a direct write.
+    await setDoc(groupRef, group);
     await syncMembershipAfterCommit(group.id);
     return group;
 }
@@ -106,15 +106,15 @@ export async function updateGroup(
         if (nameError) throw new Error(nameError);
     }
     if (changes.notificationPolicy !== undefined && !isNotificationPolicy(changes.notificationPolicy)) {
-        throw new Error("A política de notificações é inválida.");
+        throw new Error("A politica de notificacoes e invalida.");
     }
     const groupRef = doc(firestore, "groups", groupId);
     const timestamp = Date.now();
     return runTransaction(firestore, async (transaction) => {
         const snapshot = await transaction.get(groupRef);
-        if (!snapshot.exists()) throw new Error("Grupo não encontrado.");
+        if (!snapshot.exists()) throw new Error("Grupo nao encontrado.");
         const current = parseGroup(snapshot.id, snapshot.data());
-        if (current.ownerId !== actorId) throw new Error("Somente o proprietário pode editar o grupo.");
+        if (current.ownerId !== actorId) throw new Error("Somente o proprietario pode editar o grupo.");
         const updated: ChatGroup = { ...current, ...changes, updatedAt: timestamp };
         transaction.update(groupRef, { ...changes, updatedAt: timestamp });
         return updated;
@@ -122,13 +122,13 @@ export async function updateGroup(
 }
 
 export async function addMember(groupId: string, actorId: string, memberId: string): Promise<ChatGroup> {
-    if (!memberId) throw new Error("Escolha um usuário para adicionar.");
+    if (!memberId) throw new Error("Escolha um usuario para adicionar.");
     const groupRef = doc(firestore, "groups", groupId);
     const updated = await runTransaction(firestore, async (transaction) => {
         const snapshot = await transaction.get(groupRef);
-        if (!snapshot.exists()) throw new Error("Grupo não encontrado.");
+        if (!snapshot.exists()) throw new Error("Grupo nao encontrado.");
         const current = parseGroup(snapshot.id, snapshot.data());
-        if (current.ownerId !== actorId) throw new Error("Somente o proprietário pode gerenciar integrantes.");
+        if (current.ownerId !== actorId) throw new Error("Somente o proprietario pode gerenciar integrantes.");
         if (current.memberIds.includes(memberId)) return current;
         if (current.memberIds.length >= current.memberLimit) throw new Error("O grupo atingiu o limite de integrantes.");
         const memberIds = [...current.memberIds, memberId];
@@ -146,10 +146,10 @@ export async function removeMember(groupId: string, actorId: string, memberId: s
     const groupRef = doc(firestore, "groups", groupId);
     const updated = await runTransaction(firestore, async (transaction) => {
         const snapshot = await transaction.get(groupRef);
-        if (!snapshot.exists()) throw new Error("Grupo não encontrado.");
+        if (!snapshot.exists()) throw new Error("Grupo nao encontrado.");
         const current = parseGroup(snapshot.id, snapshot.data());
-        if (current.ownerId !== actorId) throw new Error("Somente o proprietário pode gerenciar integrantes.");
-        if (memberId === current.ownerId) throw new Error("O proprietário não pode remover a si mesmo.");
+        if (current.ownerId !== actorId) throw new Error("Somente o proprietario pode gerenciar integrantes.");
+        if (memberId === current.ownerId) throw new Error("O proprietario nao pode remover a si mesmo.");
         const memberIds = current.memberIds.filter((id) => id !== memberId);
         if (memberIds.length === current.memberIds.length) return current;
         const validationError = validateGroupMembers(current.ownerId, memberIds, current.memberLimit);
@@ -166,9 +166,9 @@ export async function updateMemberLimit(groupId: string, actorId: string, member
     const groupRef = doc(firestore, "groups", groupId);
     const updated = await runTransaction(firestore, async (transaction) => {
         const snapshot = await transaction.get(groupRef);
-        if (!snapshot.exists()) throw new Error("Grupo não encontrado.");
+        if (!snapshot.exists()) throw new Error("Grupo nao encontrado.");
         const current = parseGroup(snapshot.id, snapshot.data());
-        if (current.ownerId !== actorId) throw new Error("Somente o proprietário pode alterar o limite.");
+        if (current.ownerId !== actorId) throw new Error("Somente o proprietario pode alterar o limite.");
         const validationError = validateGroupMembers(current.ownerId, current.memberIds, memberLimit);
         if (validationError) throw new Error(validationError);
         const updatedAt = Date.now();
@@ -181,7 +181,7 @@ export async function updateMemberLimit(groupId: string, actorId: string, member
 
 export async function syncGroupMembership(groupId: string, actorId: string): Promise<void> {
     const group = await getGroup(groupId);
-    if (!group) throw new Error("Grupo não encontrado.");
-    if (group.ownerId !== actorId) throw new Error("Somente o proprietário pode sincronizar os integrantes.");
+    if (!group) throw new Error("Grupo nao encontrado.");
+    if (group.ownerId !== actorId) throw new Error("Somente o proprietario pode sincronizar os integrantes.");
     await syncMembershipAfterCommit(groupId);
 }
