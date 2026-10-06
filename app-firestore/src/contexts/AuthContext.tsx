@@ -10,6 +10,7 @@ interface AuthContextValue {
     user: PublicUser | null;
     loading: boolean;
     logout: () => Promise<void>;
+    updateUser: (changes: Partial<Pick<PublicUser, "name" | "photoUrl">>) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -61,7 +62,11 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
         await logoutService();
     }, []);
 
-    const value = useMemo(() => ({ user, loading, logout }), [user, loading, logout]);
+    const updateUser = useCallback((changes: Partial<Pick<PublicUser, "name" | "photoUrl">>) => {
+        setUser((currentUser) => currentUser ? { ...currentUser, ...changes } : currentUser);
+    }, []);
+
+    const value = useMemo(() => ({ user, loading, logout, updateUser }), [user, loading, logout, updateUser]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

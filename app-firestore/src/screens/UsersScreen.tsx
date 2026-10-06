@@ -57,7 +57,7 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
             console.error(error);
             if (active) {
                 setContacts([]);
-                setError(error instanceof Error ? error.message : "NÃ£o foi possÃ­vel carregar os contatos.");
+                setError(error instanceof Error ? error.message : "Não foi possível carregar os contatos.");
             }
         }).finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
@@ -135,6 +135,7 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
                     renderItem={({ item }) => (
                         <UserItem
                             user={item}
+                            opening={openingUserId === item.uid}
                             onViewProfile={(contact) => navigation.navigate("Profile", { userId: contact.uid })}
                             onPress={async (contact: PublicUser) => {
                                 if (contact.uid === user.uid || openingUserId) return;
@@ -147,7 +148,7 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
                                     });
                                 } catch (reason) {
                                     console.error(reason);
-                                    setError(reason instanceof Error ? reason.message : "NÃ£o foi possÃ­vel iniciar a conversa.");
+                                    setError(reason instanceof Error ? reason.message : "Não foi possível iniciar a conversa.");
                                 } finally {
                                     setOpeningUserId(null);
                                 }

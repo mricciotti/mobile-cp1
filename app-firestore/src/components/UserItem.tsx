@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, glow, radius, spacing } from "../theme/theme";
 import { PublicUser } from "../types/user";
 import { Avatar } from "./Avatar";
@@ -7,9 +7,10 @@ interface UserItemProps {
     user: PublicUser;
     onPress: (user: PublicUser) => void;
     onViewProfile: (user: PublicUser) => void;
+    opening?: boolean;
 }
 
-export function UserItem({ user, onPress, onViewProfile }: UserItemProps) {
+export function UserItem({ user, onPress, onViewProfile, opening = false }: UserItemProps) {
     return (
         <View style={styles.container}>
             <Pressable onPress={() => onViewProfile(user)} style={({ pressed }) => [styles.profileTarget, pressed && styles.pressed]}>
@@ -19,8 +20,8 @@ export function UserItem({ user, onPress, onViewProfile }: UserItemProps) {
                     <Text style={styles.profileHint}>Ver perfil</Text>
                 </View>
             </Pressable>
-            <Pressable onPress={() => onPress(user)} style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}>
-                <Text style={styles.startButtonText}>Conversar</Text>
+            <Pressable onPress={() => onPress(user)} disabled={opening} style={({ pressed }) => [styles.startButton, pressed && styles.pressed, opening && styles.disabled]}>
+                {opening ? <ActivityIndicator color={colors.background} /> : <Text style={styles.startButtonText}>Conversar</Text>}
             </Pressable>
         </View>
     );
@@ -47,6 +48,9 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.75,
+    },
+    disabled: {
+        opacity: 0.65,
     },
     info: {
         flex: 1,
