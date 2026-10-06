@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { ImagePickerAsset } from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../hooks/useAuth";
 import { RootStackParamList } from "../navigation/types";
@@ -16,6 +17,7 @@ import { Loading } from "../components/Loading";
 import { TextField } from "../components/TextField";
 import { colors, radius, spacing } from "../theme/theme";
 import { AppShell } from "../components/AppShell";
+import { pickImage, uploadImage } from "../services/imageService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "GroupForm">;
 
@@ -33,6 +35,7 @@ export function GroupFormScreen({ route, navigation }: Props) {
     const [users, setUsers] = useState<PublicUser[]>([]);
     const [name, setName] = useState("");
     const [photoUrl, setPhotoUrl] = useState("");
+    const [selectedPhoto, setSelectedPhoto] = useState<ImagePickerAsset | null>(null);
     const [memberLimit, setMemberLimit] = useState("5");
     const [policy, setPolicy] = useState<NotificationPolicy>("all_group_messages");
     const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
@@ -44,6 +47,7 @@ export function GroupFormScreen({ route, navigation }: Props) {
     useEffect(() => {
         if (!user) return;
         let active = true;
+        setSelectedPhoto(null);
         Promise.all([
             searchUsers(""),
             route.params?.groupId ? getGroup(route.params.groupId) : Promise.resolve(null),
@@ -51,7 +55,7 @@ export function GroupFormScreen({ route, navigation }: Props) {
             if (!active) return;
             setUsers(allUsers.filter((entry) => entry.uid !== user.uid));
             if (loadedGroup) {
-                if (loadedGroup.ownerId !== user.uid) throw new Error("Somente o proprietÃ¡rio pode administrar o grupo.");
+                if (loadedGroup.ownerId !== user.uid) throw new Error("Somente o proprietário pode administrar o grupo.");
                 setGroup(loadedGroup);
                 setName(loadedGroup.name);
                 setPhotoUrl(loadedGroup.photoUrl);
@@ -61,7 +65,7 @@ export function GroupFormScreen({ route, navigation }: Props) {
             }
         }).catch((reason: unknown) => {
             console.error(reason);
-            if (active) setError(reason instanceof Error ? reason.message : "NÃ£o foi possÃ­vel carregar o grupo.");
+            if (active) setError(reason instanceof Error ? reason.message : "Não foi possível carregar o grupo.");
         }).finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
     }, [route.params?.groupId, user]);
@@ -79,6 +83,16 @@ export function GroupFormScreen({ route, navigation }: Props) {
         setSelectedMemberIds((current) => current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid]);
     }
 
+    async function choosePhoto() {
+        if (saving) return;
+        try {
+            const selected = await pickImage();
+            if (selected) setSelectedPhoto(selected);
+        } catch (reason: unknown) {
+            setError(reason instanceof Error ? reason.message : "Não foi possível selecionar a foto.");
+        }
+    }
+
     async function submit() {
         if (!user) return;
         setError("");
@@ -93,12 +107,13 @@ export function GroupFormScreen({ route, navigation }: Props) {
 
         try {
             setSaving(true);
+            const finalPhotoUrl = selectedPhoto ? await uploadImage(selectedPhoto) : photoUrl.trim();
             if (!group) {
-                await createGroup(user.uid, { name, photoUrl: photoUrl.trim(), memberIds: selectedMemberIds, memberLimit: parsedLimit, notificationPolicy: policy });
+                await createGroup(user.uid, { name, photoUrl: finalPhotoUrl, memberIds: selectedMemberIds, memberLimit: parsedLimit, notificationPolicy: policy });
             } else {
                 let current = group;
-                if (current.name !== name.trim() || current.photoUrl !== photoUrl.trim() || current.notificationPolicy !== policy) {
-                    current = await updateGroup(group.id, user.uid, { name: name.trim(), photoUrl: photoUrl.trim(), notificationPolicy: policy });
+                if (current.name !== name.trim() || current.photoUrl !== finalPhotoUrl || current.notificationPolicy !== policy) {
+                    current = await updateGroup(group.id, user.uid, { name: name.trim(), photoUrl: finalPhotoUrl, notificationPolicy: policy });
                 }
                 for (const memberId of current.memberIds.filter((id) => !selectedMemberIds.includes(id) && id !== user.uid)) {
                     current = await removeMember(group.id, user.uid, memberId);
@@ -113,7 +128,7 @@ export function GroupFormScreen({ route, navigation }: Props) {
             console.error(reason);
             setError(reason instanceof MembershipSyncError
                 ? `${reason.message} O grupo permanece salvo e pode ser sincronizado novamente.`
-                : reason instanceof Error ? reason.message : "NÃ£o foi possÃ­vel salvar o grupo.");
+                : reason instanceof Error ? reason.message : "Não foi possível salvar o grupo.");
         } finally {
             setSaving(false);
         }
@@ -140,7 +155,11 @@ export function GroupFormScreen({ route, navigation }: Props) {
                 {error ? <ErrorMessage message={error} /> : null}
 
                 <TextField label="Nome do grupo" placeholder="Ex.: Projeto CP2" value={name} onChangeText={setName} editable={!saving} />
-                <TextField label="URL da foto (opcional)" placeholder="https://..." value={photoUrl} onChangeText={setPhotoUrl} editable={!saving} autoCapitalize="none" />
+                <View style={styles.photoSection}>
+                    {selectedPhoto ? <Image source={{ uri: selectedPhoto.uri }} style={styles.photoPreview} /> : <Avatar photoUrl={photoUrl} name={name || "Grupo"} size={88} />}
+                    <Button title={selectedPhoto || photoUrl ? "Trocar foto" : "Escolher foto"} variant="outline" onPress={choosePhoto} disabled={saving} />
+                    {selectedPhoto ? <Text style={styles.photoHint}>A nova foto será enviada ao salvar.</Text> : null}
+                </View>
                 <TextField label="Limite de integrantes" placeholder="5" value={memberLimit} onChangeText={(value) => setMemberLimit(value.replace(/\D/g, ""))} editable={!saving} keyboardType="number-pad" />
 
                 <View style={styles.summary}>
@@ -182,6 +201,9 @@ const styles = StyleSheet.create({
     back: { color: colors.primary, fontWeight: "700", fontSize: 16 },
     title: { color: colors.text, fontSize: 28, fontWeight: "800" },
     subtitle: { color: colors.textMuted, fontSize: 14 },
+    photoSection: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+    photoPreview: { width: 88, height: 88, borderRadius: 44, borderColor: colors.primary, borderWidth: 1.5 },
+    photoHint: { color: colors.textFaint, fontSize: 12, textAlign: "center" },
     summary: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: 5 },
     summaryTitle: { color: colors.text, fontWeight: "800" },
     summaryText: { color: colors.textMuted },

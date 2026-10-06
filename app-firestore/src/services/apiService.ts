@@ -24,9 +24,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 async function authenticatedApiRequest(path: string, init: RequestInit = {}): Promise<unknown> {
-    if (!API_BASE_URL) throw new Error("A URL da API nÃ£o estÃ¡ configurada.");
+    if (!API_BASE_URL) throw new Error("A URL da API não está configurada.");
     const currentUser = auth.currentUser;
-    if (!currentUser) throw new Error("Ã‰ necessÃ¡rio entrar novamente para continuar.");
+    if (!currentUser) throw new Error("É necessário entrar novamente para continuar.");
     const requestWithToken = (idToken: string) => fetch(`${API_BASE_URL}${path}`, {
         ...init,
         headers: {
@@ -45,7 +45,7 @@ async function authenticatedApiRequest(path: string, init: RequestInit = {}): Pr
     if (!response.ok) {
         const message = isRecord(payload) && typeof (payload as ApiErrorPayload).message === "string"
             ? payload.message as string
-            : "A API recusou a solicitaÃ§Ã£o.";
+            : "A API recusou a solicitação.";
         throw new Error(message);
     }
     return payload;
@@ -54,7 +54,7 @@ async function authenticatedApiRequest(path: string, init: RequestInit = {}): Pr
 export async function getRelatedPrivateProfile(uid: string): Promise<PrivateUserProfile> {
     const payload = await authenticatedApiRequest(`/users/${encodeURIComponent(uid)}/private-profile`);
     if (!isRecord(payload) || typeof payload.email !== "string" || typeof payload.phoneNumber !== "string" || typeof payload.birthDate !== "string") {
-        throw new Error("A API retornou um perfil invÃ¡lido.");
+        throw new Error("A API retornou um perfil inválido.");
     }
     return { email: payload.email, phoneNumber: payload.phoneNumber, birthDate: payload.birthDate };
 }
@@ -65,7 +65,7 @@ export async function syncGroupConversationMembers(groupId: string): Promise<Mem
         { method: "POST", body: "{}" }
     );
     if (!isRecord(payload) || payload.synced !== true) {
-        throw new Error("A API nÃ£o confirmou a sincronizaÃ§Ã£o dos integrantes.");
+        throw new Error("A API não confirmou a sincronização dos integrantes.");
     }
     return { synced: true };
 }
@@ -76,7 +76,7 @@ export async function syncDirectConversationMembers(conversationId: string): Pro
         { method: "POST", body: "{}" }
     );
     if (!isRecord(payload) || payload.synced !== true) {
-        throw new Error("A API nÃ£o confirmou a sincronizaÃ§Ã£o dos participantes.");
+        throw new Error("A API não confirmou a sincronização dos participantes.");
     }
     return { synced: true };
 }
@@ -95,7 +95,7 @@ export async function notifyMessage(
         || typeof payload.deviceCount !== "number"
         || typeof payload.sent !== "number"
         || typeof payload.skipped !== "number") {
-        throw new Error("A API nÃ£o confirmou o processamento da notificaÃ§Ã£o.");
+        throw new Error("A API não confirmou o processamento da notificação.");
     }
     return {
         messageId,

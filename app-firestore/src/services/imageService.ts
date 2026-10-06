@@ -102,7 +102,7 @@ export async function uploadImage(asset: ImagePicker.ImagePickerAsset): Promise<
         if (Platform.OS === "web") {
             const assetResponse = await fetch(asset.uri);
             if (!assetResponse.ok) {
-                throw new Error(`NÃ£o foi possÃ­vel ler a imagem selecionada (${assetResponse.status}).`);
+                throw new Error(`Não foi possível ler a imagem selecionada (${assetResponse.status}).`);
             }
 
             const blob = await assetResponse.blob();

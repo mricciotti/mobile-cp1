@@ -52,9 +52,9 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
             if (route.params.conversationType === "direct") {
                 const conversation = await getDirectConversation(route.params.conversationId);
                 const otherId = conversation?.participantIds.find((id) => id !== user.uid);
-                if (!conversation || !otherId) throw new Error("Conversa individual indisponÃ­vel.");
+                if (!conversation || !otherId) throw new Error("Conversa individual indisponível.");
                 const profile = await getPublicUser(otherId);
-                if (!profile) throw new Error("UsuÃ¡rio indisponÃ­vel.");
+                if (!profile) throw new Error("Usuário indisponível.");
                 if (active) {
                     setTitle(profile.name);
                     setPhotoUrl(profile.photoUrl);
@@ -65,7 +65,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
                 const profiles = group
                     ? await Promise.all(group.memberIds.filter((memberId) => memberId !== user.uid).map((memberId) => getPublicUser(memberId)))
                     : [];
-                if (!group || !group.memberIds.includes(user.uid)) throw new Error("Grupo indisponÃ­vel.");
+                if (!group || !group.memberIds.includes(user.uid)) throw new Error("Grupo indisponível.");
                 if (active) {
                     setTitle(group.name);
                     setPhotoUrl(group.photoUrl);
@@ -79,7 +79,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
         loadConversationHeader()
             .catch((reason: unknown) => {
                 console.error(reason);
-                if (active) setError(reason instanceof Error ? reason.message : "NÃ£o foi possÃ­vel carregar a conversa.");
+                if (active) setError(reason instanceof Error ? reason.message : "Não foi possível carregar a conversa.");
             })
             .finally(() => { if (active) setLoading(false); });
 
@@ -89,7 +89,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
     if (!user) return null;
     if (loading) return <Loading />;
     if (error || !title) {
-        return <SafeAreaView style={{ flex: 1 }}><ErrorMessage message={error ?? "Conversa indisponÃ­vel."} /></SafeAreaView>;
+        return <SafeAreaView style={{ flex: 1 }}><ErrorMessage message={error ?? "Conversa indisponível."} /></SafeAreaView>;
     }
 
     return (
