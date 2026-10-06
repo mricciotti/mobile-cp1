@@ -5,6 +5,7 @@ import {
     getDocs,
     orderBy,
     query,
+    setDoc,
     updateDoc,
     writeBatch,
 } from "firebase/firestore";
@@ -120,4 +121,13 @@ export async function updateOwnProfile(uid: string, changes: {
         batch.update(doc(firestore, "users", uid, "private", "profile"), changes.private);
     }
     await batch.commit();
+}
+
+export async function markConversationRead(uid: string, conversationId: string): Promise<void> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) {
+        throw new Error("O cliente s\u00f3 pode atualizar o pr\u00f3prio estado de leitura.");
+    }
+    await setDoc(doc(firestore, "users", uid, "conversationState", conversationId), {
+        lastReadAt: Date.now(),
+    }, { merge: true });
 }

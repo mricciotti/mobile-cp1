@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useChat } from "../hooks/useChat";
@@ -10,6 +10,7 @@ import { Avatar } from "../components/Avatar";
 import { colors, radius, spacing } from "../theme/theme";
 import { PublicUser } from "../types/user";
 import { ChatMessage } from "../types/chat";
+import { markConversationRead } from "../services/userService";
 
 interface ChatScreenProps {
     currentUser: PublicUser;
@@ -23,6 +24,12 @@ interface ChatScreenProps {
 export function ChatScreen({ currentUser, conversationId, conversationType, title, photoUrl, onBack }: ChatScreenProps) {
     const { messages, loading, error, sendText } = useChat(currentUser.uid, conversationId, conversationType);
     const listRef = useRef<FlatList<ChatMessage>>(null);
+
+    useEffect(() => {
+        markConversationRead(currentUser.uid, conversationId).catch((reason: unknown) => {
+            console.warn("N\u00e3o foi poss\u00edvel atualizar a leitura da conversa.", reason);
+        });
+    }, [currentUser.uid, conversationId, messages.length]);
 
     return (
         <SafeAreaView style={styles.container}>

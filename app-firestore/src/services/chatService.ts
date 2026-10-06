@@ -1,5 +1,7 @@
 import { off, onValue, push, ref, serverTimestamp, set } from "firebase/database";
+import { doc, updateDoc } from "firebase/firestore";
 import { database } from "../config/firebase";
+import { firestore } from "../config/firebase";
 import { ChatMessage, MessageTarget } from "../types/chat";
 import { notifyMessage } from "./apiService";
 
@@ -50,6 +52,22 @@ export async function sendMessage(
         mentionedUserIds,
         createdAt: serverTimestamp(),
     });
+
+    try {
+        await updateDoc(doc(
+            firestore,
+            conversationType === "direct" ? "directConversations" : "groups",
+            conversationId,
+        ), {
+            lastMessageText: trimmedText,
+            lastMessageAt: Date.now(),
+            lastSenderId: senderId,
+        });
+    } catch (reason) {
+        // The RTDB message is already durable. Metadata failure must not make
+        // the user resend a message that was successfully saved.
+        console.warn("Mensagem salva, mas os metadados da conversa falharam.", reason);
+    }
 
     try {
         await notifyMessage(conversationId, newMessageRef.key);

@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../hooks/useAuth";
 import { searchUsers } from "../services/userService";
-import { getOrCreateDirectConversation } from "../services/conversationService";
+import { getOrCreateDirectConversation, listUserConversations } from "../services/conversationService";
 import { RootStackParamList } from "../navigation/types";
 import { UserItem } from "../components/UserItem";
 import { Loading } from "../components/Loading";
@@ -16,7 +16,7 @@ import { Avatar } from "../components/Avatar";
 
 type UsersScreenProps = NativeStackScreenProps<RootStackParamList, "Users">;
 
-export function UsersScreen({ navigation }: UsersScreenProps) {
+export function UsersScreen({ navigation, route }: UsersScreenProps) {
     const { user, logout } = useAuth();
     const [contacts, setContacts] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,9 +31,18 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
         let active = true;
         setLoading(true);
         setError("");
-        searchUsers(search).then((matches) => {
+        Promise.all([searchUsers(search), route.params.mode === "direct" ? listUserConversations(user.uid) : Promise.resolve([])])
+        .then(([matches, conversations]) => {
             if (!active) return;
-            setContacts(matches.filter((contact) => contact.uid !== user.uid));
+            const existingDirectParticipantIds = new Set(
+                conversations
+                    .filter((conversation) => conversation.type === "direct")
+                    .map((conversation) => conversation.otherParticipantId),
+            );
+            setContacts(matches.filter((contact) => (
+                contact.uid !== user.uid
+                && (route.params.mode !== "direct" || !existingDirectParticipantIds.has(contact.uid))
+            )));
         }).catch((error: unknown) => {
             console.error(error);
             if (active) {
@@ -42,7 +51,7 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
             }
         }).finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
-    }, [user, search]);
+    }, [route.params.mode, user, search]);
 
     if (!user) {
         return null;

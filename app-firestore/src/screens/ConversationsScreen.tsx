@@ -12,6 +12,16 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
 import { colors, glow, radius, spacing } from "../theme/theme";
 
+function formatConversationTime(timestamp: number): string {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+        return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    return date.toLocaleDateString([], { day: "2-digit", month: "2-digit" });
+}
+
 type Props = NativeStackScreenProps<RootStackParamList, "Conversations">;
 
 export function ConversationsScreen({ navigation }: Props) {
@@ -79,12 +89,23 @@ export function ConversationsScreen({ navigation }: Props) {
                                 onPress={() => navigation.navigate("Chat", { conversationId: item.id, conversationType: item.type })}
                                 style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                             >
-                                <Avatar name={item.type === "group" ? item.name : "D"} photoUrl={item.type === "group" ? item.photoUrl : ""} size={48} />
+                                <Avatar
+                                    name={item.type === "group" ? item.name : item.otherParticipant.name}
+                                    photoUrl={item.type === "group" ? item.photoUrl : item.otherParticipant.photoUrl}
+                                    size={48}
+                                />
                                 <View style={styles.rowInfo}>
-                                    <Text style={styles.rowTitle}>{item.type === "group" ? item.name : "Conversa direta"}</Text>
-                                    <Text style={styles.rowSubtitle}>{item.type === "group" ? `${item.memberIds.length} integrantes` : "Conversa individual"}</Text>
+                                    <Text style={[styles.rowTitle, item.isUnread && styles.unreadText]} numberOfLines={1}>
+                                        {item.type === "group" ? item.name : item.otherParticipant.name}
+                                    </Text>
+                                    <Text style={[styles.rowSubtitle, item.isUnread && styles.unreadSubtitle]} numberOfLines={1}>
+                                        {item.lastMessageText || (item.type === "group" ? "Voc\u00ea foi adicionado ao grupo" : "Nenhuma mensagem ainda")}
+                                    </Text>
                                 </View>
-                                <Text style={styles.kind}>{item.type === "group" ? "GRUPO" : "DIRETA"}</Text>
+                                <View style={styles.rowMeta}>
+                                    <Text style={styles.time}>{formatConversationTime(item.lastMessageAt || item.createdAt)}</Text>
+                                    {item.isUnread ? <View style={styles.unreadBadge}><Text style={styles.unreadBadgeText}>1</Text></View> : null}
+                                </View>
                             </Pressable>
                             {item.type === "group" && item.ownerId === user.uid ? (
                                 <Button title="Gerir" variant="ghost" onPress={() => navigation.navigate("GroupForm", { groupId: item.id })} style={styles.manageButton} />
@@ -120,8 +141,13 @@ const styles = StyleSheet.create({
     row: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.surface, ...glow.card },
     rowContainer: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     pressed: { opacity: 0.75, borderColor: colors.borderStrong },
-    rowInfo: { flex: 1, gap: 4 },
+    rowInfo: { flex: 1, gap: 4, minWidth: 0 },
     rowTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
     rowSubtitle: { color: colors.textMuted, fontSize: 12 },
-    kind: { color: colors.textFaint, fontSize: 9, fontWeight: "700", letterSpacing: 0.6 },
+    unreadText: { fontWeight: "800" },
+    unreadSubtitle: { color: colors.text },
+    rowMeta: { alignItems: "flex-end", justifyContent: "center", gap: spacing.xs },
+    time: { color: colors.textFaint, fontSize: 10 },
+    unreadBadge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary },
+    unreadBadgeText: { color: colors.background, fontSize: 11, fontWeight: "800" },
 });
