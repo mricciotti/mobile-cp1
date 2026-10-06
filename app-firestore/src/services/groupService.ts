@@ -164,7 +164,7 @@ export async function removeMember(groupId: string, actorId: string, memberId: s
 
 export async function updateMemberLimit(groupId: string, actorId: string, memberLimit: number): Promise<ChatGroup> {
     const groupRef = doc(firestore, "groups", groupId);
-    return runTransaction(firestore, async (transaction) => {
+    const updated = await runTransaction(firestore, async (transaction) => {
         const snapshot = await transaction.get(groupRef);
         if (!snapshot.exists()) throw new Error("Grupo não encontrado.");
         const current = parseGroup(snapshot.id, snapshot.data());
@@ -175,6 +175,8 @@ export async function updateMemberLimit(groupId: string, actorId: string, member
         transaction.update(groupRef, { memberLimit, updatedAt });
         return { ...current, memberLimit, updatedAt };
     });
+    await syncMembershipAfterCommit(groupId);
+    return updated;
 }
 
 export async function syncGroupMembership(groupId: string, actorId: string): Promise<void> {

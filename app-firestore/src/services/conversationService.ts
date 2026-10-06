@@ -1,6 +1,7 @@
 import {
     collection,
     doc,
+    getDoc,
     getDocs,
     query,
     runTransaction,
@@ -24,9 +25,25 @@ export type ConversationListEntry =
         type: "group";
         name: string;
         photoUrl: string;
+        ownerId: string;
         memberIds: string[];
         createdAt: number;
+};
+
+export async function getDirectConversation(conversationId: string): Promise<DirectConversation | null> {
+    const snapshot = await getDoc(doc(firestore, "directConversations", conversationId));
+    if (!snapshot.exists()) return null;
+    const data = snapshot.data();
+    const participantIds = data.participantIds;
+    if (data.type !== "direct" || !Array.isArray(participantIds) || participantIds.length !== 2
+        || !participantIds.every((id: unknown) => typeof id === "string")) return null;
+    return {
+        id: snapshot.id,
+        type: "direct",
+        participantIds: participantIds as [string, string],
+        createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     };
+}
 
 export async function getOrCreateDirectConversation(uidA: string, uidB: string): Promise<DirectConversation> {
     if (!uidA || !uidB || uidA === uidB) throw new Error("Escolha outra pessoa para iniciar uma conversa.");
@@ -104,6 +121,7 @@ export async function listUserConversations(uid: string): Promise<ConversationLi
             type: "group",
             name: typeof data.name === "string" ? data.name : "Grupo",
             photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
+            ownerId: typeof data.ownerId === "string" ? data.ownerId : "",
             memberIds,
             createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
         }];

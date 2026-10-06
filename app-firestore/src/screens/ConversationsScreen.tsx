@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../hooks/useAuth";
@@ -19,7 +20,7 @@ export function ConversationsScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    useEffect(() => {
+    useFocusEffect(useCallback(() => {
         if (!user) return;
         let active = true;
         setLoading(true);
@@ -32,7 +33,7 @@ export function ConversationsScreen({ navigation }: Props) {
             })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
-    }, [user]);
+    }, [user]));
 
     if (!user) return null;
 
@@ -54,7 +55,10 @@ export function ConversationsScreen({ navigation }: Props) {
 
             <View style={styles.titleRow}>
                 <Text style={styles.title}>Mensagens</Text>
-                <Button title="Nova conversa" onPress={() => navigation.navigate("Users", { mode: "direct" })} style={styles.newButton} />
+                <View style={styles.titleActions}>
+                    <Button title="Novo grupo" variant="outline" onPress={() => navigation.navigate("GroupForm", {})} style={styles.newButton} />
+                    <Button title="Nova conversa" onPress={() => navigation.navigate("Users", { mode: "direct" })} style={styles.newButton} />
+                </View>
             </View>
 
             {error ? <View style={styles.error}><ErrorMessage message={error} /></View> : null}
@@ -70,24 +74,22 @@ export function ConversationsScreen({ navigation }: Props) {
                         </View>
                     }
                     renderItem={({ item }) => (
-                        <Pressable
-                            disabled={item.type === "group"}
-                            onPress={() => {
-                                if (item.type === "direct") navigation.navigate("Chat", {
-                                    conversationId: item.id,
-                                    conversationType: "direct",
-                                    otherUserId: item.otherParticipantId,
-                                });
-                            }}
-                            style={({ pressed }) => [styles.row, pressed && item.type === "direct" && styles.pressed]}
-                        >
-                            <Avatar name={item.type === "group" ? item.name : "D"} photoUrl={item.type === "group" ? item.photoUrl : ""} size={48} />
-                            <View style={styles.rowInfo}>
-                                <Text style={styles.rowTitle}>{item.type === "group" ? item.name : "Conversa direta"}</Text>
-                                <Text style={styles.rowSubtitle}>{item.type === "group" ? `${item.memberIds.length} integrantes` : "Conversa individual"}</Text>
-                            </View>
-                            <Text style={styles.kind}>{item.type === "group" ? "GRUPO" : "DIRETA"}</Text>
-                        </Pressable>
+                        <View style={styles.rowContainer}>
+                            <Pressable
+                                onPress={() => navigation.navigate("Chat", { conversationId: item.id, conversationType: item.type })}
+                                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                            >
+                                <Avatar name={item.type === "group" ? item.name : "D"} photoUrl={item.type === "group" ? item.photoUrl : ""} size={48} />
+                                <View style={styles.rowInfo}>
+                                    <Text style={styles.rowTitle}>{item.type === "group" ? item.name : "Conversa direta"}</Text>
+                                    <Text style={styles.rowSubtitle}>{item.type === "group" ? `${item.memberIds.length} integrantes` : "Conversa individual"}</Text>
+                                </View>
+                                <Text style={styles.kind}>{item.type === "group" ? "GRUPO" : "DIRETA"}</Text>
+                            </Pressable>
+                            {item.type === "group" && item.ownerId === user.uid ? (
+                                <Button title="Gerir" variant="ghost" onPress={() => navigation.navigate("GroupForm", { groupId: item.id })} style={styles.manageButton} />
+                            ) : null}
+                        </View>
                     )}
                     ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
                 />
@@ -107,13 +109,16 @@ const styles = StyleSheet.create({
     actionButton: { width: 74 },
     titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.md },
     title: { color: colors.text, fontSize: 25, fontWeight: "800" },
-    newButton: { minWidth: 138 },
+    newButton: { minWidth: 110 },
+    titleActions: { flexDirection: "row", gap: spacing.xs, flexShrink: 1 },
+    manageButton: { width: 68 },
     error: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
     list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
     empty: { alignItems: "center", gap: spacing.sm, marginTop: spacing.xl, paddingHorizontal: spacing.lg },
     emptyTitle: { color: colors.text, fontSize: 17, fontWeight: "700" },
     emptyText: { color: colors.textMuted, textAlign: "center", lineHeight: 20 },
-    row: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.surface, ...glow.card },
+    row: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.surface, ...glow.card },
+    rowContainer: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     pressed: { opacity: 0.75, borderColor: colors.borderStrong },
     rowInfo: { flex: 1, gap: 4 },
     rowTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },

@@ -19,11 +19,11 @@ declare module "express-serve-static-core" {
 
 export function sendError(res: Response, error: unknown): void {
   if (error instanceof HttpError) {
-    res.status(error.statusCode).json({ error: error.message });
+    res.status(error.statusCode).json({ message: error.message });
     return;
   }
   console.error("API request failed", error);
-  res.status(500).json({ error: "Internal server error." });
+  res.status(500).json({ message: "Internal server error." });
 }
 
 export const errorHandler: ErrorRequestHandler = (error, _req, res) => {

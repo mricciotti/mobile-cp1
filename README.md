@@ -1,166 +1,99 @@
-# Chat Firebase — CP1 Mobile Development & IoT
+# Chat Firebase — CP2
 
-Aplicativo de chat 1 para 1 em React Native + TypeScript, com autenticação
-por E-mail/Senha, Google e Apple via Firebase Authentication, e mensagens em
-tempo real via Firebase Realtime Database.
+Aplicativo de chat individual e em grupo desenvolvido com React Native, Expo e TypeScript. O CP2 mantém o Realtime Database para mensagens em tempo real e usa Cloud Firestore como fonte de verdade para perfis, conversas diretas, grupos e dispositivos.
 
-## Integrantes
+## Stack
 
-- RM554673 - Fernanda Rocha Menon
-- RM556237 - Luiza Macena Dantas
-- RM558537 - Luan Ramos Garcia de Souza
-- RM556930 - Matheus Ricciotti
-- RM555189 - Matheus Bortolotto
+- Expo SDK 55, React Native e TypeScript
+- Firebase Authentication com e-mail e senha
+- Cloud Firestore para dados estruturados e regras de acesso
+- Firebase Realtime Database para mensagens e espelho de autorização
+- Cloudinary com upload unsigned para imagens do app
+- API Node.js/TypeScript/Express hospedada na Vercel
+- Expo Notifications para tokens e notificações push
 
-## Tecnologias utilizadas
-
-- React Native
-- Expo (SDK 55)
-- TypeScript
-- Firebase Authentication (e-mail/senha, Google, Apple)
-- Firebase Realtime Database
-- `@react-native-google-signin/google-signin`
-- `expo-apple-authentication`
-- EAS Build (development client, necessário para Google/Apple nativos)
-
-## Serviços Firebase utilizados
-
-- **Authentication**: cadastro/login por e-mail e senha, login com Google e
-  login com Apple.
-- **Realtime Database**: perfis de usuário (`users/{uid}`), conversas
-  (`conversations/{conversationId}`) e mensagens
-  (`messages/{conversationId}/{messageId}`), todos sincronizados em tempo
-  real.
-
-## Limitação conhecida: Apple Sign-In
-
-O login com Apple está **implementado no código** (`loginWithApple` em
-`src/services/authService.ts`, botão nativo em `LoginScreen.tsx`,
-`usesAppleSignIn` configurado em `app.json`), seguindo a mesma lógica dos
-demais provedores.
-
-Porém, para o provedor Apple funcionar de ponta a ponta é necessário
-habilitá-lo no Firebase Authentication, o que exige gerar um Services ID,
-Team ID e uma chave privada no **Apple Developer Portal** — só acessível com
-uma conta paga (Apple Developer Program, US$ 99/ano). Como este é um
-projeto acadêmico, optamos por **não contratar essa conta**.
-
-Na prática: o botão de login com Apple aparece normalmente em dispositivos
-iOS, mas ao tentar entrar o Firebase retorna o erro "esse método de login
-não está habilitado" — comportamento esperado e já tratado na tela de login,
-não um bug.
-
-## Regra de comunicação entre provedores
-
-Um usuário só pode conversar com alguém que entrou por um método diferente
-de "família":
-
-- E-mail/Senha ↔ Google
-- E-mail/Senha ↔ Apple
-- Google ↔ Google, Apple ↔ Apple e Google ↔ Apple **não são permitidos**
-
-Essa regra está implementada em
-[`app-firestore/src/utils/chatRules.ts`](app-firestore/src/utils/chatRules.ts)
-e é aplicada na tela de contatos
-([`UsersScreen.tsx`](app-firestore/src/screens/UsersScreen.tsx)), que só
-lista pessoas compatíveis com o provedor do usuário logado.
-
-## Estrutura do projeto
+## Estrutura
 
 ```text
 app-firestore/
-  App.tsx
-  app.json
-  eas.json
-  database.rules.json
-  plugins/
-    withGradleMemoryFix.js  # config plugin: ajusta memória do Gradle no build EAS
   src/
-    components/    # Loading, ErrorMessage, UserItem, ChatMessage, ChatInput,
-                   # Button, TextField, SocialButton, BrandMarks (Google/Apple)
-    contexts/       # AuthContext (estado de autenticação global)
-    hooks/          # useAuth, useChat
-    screens/        # LoginScreen, UsersScreen, ChatScreen
-    services/       # authService, userService, chatService (Firebase)
-    types/          # ChatUser/AuthProvider, Conversation/ChatMessage
-    utils/          # chatRules (regra de compatibilidade entre provedores)
-    config/         # firebase.ts (inicialização do Firebase)
-    theme/          # theme.ts (cores, espaçamentos, raios usados nos estilos)
+    components/      componentes reutilizáveis
+    contexts/        autenticação e registro de push
+    hooks/           estado do chat
+    navigation/      rotas e abertura por notificação
+    screens/         login, cadastro, perfil, contatos, grupos e chat
+    services/        Firebase, Cloudinary, API, grupos e notificações
+    types/           modelos CP2
+    utils/           validações e identificadores
+  firestore.rules    regras do Cloud Firestore
+  database.rules.json regras do Realtime Database
+  firebaseConfig.json configuração pública do Firebase
+  server/            API protegida por Firebase ID Token
 ```
 
-## Configuração do Firebase
- O que já está configurado nesse projeto:
+## Dados e segurança
 
-- **Realtime Database** criado, com as regras de segurança de
-  `database.rules.json` publicadas (só participantes autenticados de cada
-  conversa leem/escrevem nela).
-- **Authentication** com e-mail/senha e Google habilitados (Apple seguiria o
-  mesmo caminho — ver limitação documentada acima).
-- Apps **Android** e **iOS** registrados no projeto, necessários pros
-  módulos nativos de login (`google-services.json`/`GoogleService-Info.plist`
-  na raiz de `app-firestore/`).
+- `users/{uid}` contém somente dados públicos de perfil.
+- `users/{uid}/private/profile` contém e-mail, celular e data de nascimento do próprio usuário.
+- `users/{uid}/devices/{deviceId}` contém tokens Expo registrados pelo próprio usuário.
+- `publicUsers/{uid}` é a projeção pública usada pela busca de contatos.
+- `directConversations/{conversationId}` e `groups/{groupId}` são a fonte de verdade das associações.
+- `messages/{conversationId}/{messageId}` contém as mensagens CP2 no Realtime Database.
+- `conversationMembers/{conversationId}/{uid}` é um espelho privado usado pelas regras do Realtime Database; somente a API Admin o atualiza.
 
-## Como executar
+Não há credenciais administrativas no aplicativo. O Firebase Admin SDK usa somente variáveis de ambiente do servidor.
 
-Pré-requisitos: Node.js LTS e, para testar Google/Apple de verdade, uma
-conta Expo/EAS gratuita e um development build gerado via EAS.
+## Variáveis do app
 
-```bash
+Copie `app-firestore/.env.example` para `.env` durante o desenvolvimento local:
+
+```env
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=xyywdpvg
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET=MOBILE_CP2
+EXPO_PUBLIC_API_BASE_URL=https://seu-projeto.vercel.app
+```
+
+O preset do Cloudinary deve permanecer unsigned e usar a pasta `mobile-cp2`. API Secret não deve ser colocado no app.
+
+## API na Vercel
+
+O projeto da Vercel deve usar `app-firestore/server` como Root Directory. Configure no ambiente da Vercel:
+
+```env
+FIREBASE_PROJECT_ID=...
+FIREBASE_CLIENT_EMAIL=...
+FIREBASE_PRIVATE_KEY=...
+FIREBASE_DATABASE_URL=...
+EXPO_ACCESS_TOKEN=...
+```
+
+A API expõe somente as fronteiras necessárias do CP2:
+
+- `GET /health`
+- `GET /users/:uid/private-profile`
+- `POST /groups/:groupId/membership/sync`
+- `POST /direct-conversations/:conversationId/membership/sync`
+- `POST /notifications/messages`
+
+As rotas protegidas exigem `Authorization: Bearer <Firebase ID token>`. O endpoint de notificação recebe apenas `conversationId` e `messageId`; os destinatários são derivados pelo servidor a partir do Firebase.
+
+## Execução e validação
+
+```powershell
 cd app-firestore
 npm install
-
-# Login por e-mail/senha funciona direto no Expo Go:
 npx expo start
-
-# Google e Apple Sign-In exigem um development build (não funcionam no
-# Expo Go, pois usam módulos nativos):
-eas build --profile development --platform android
-# depois de instalar o build gerado no dispositivo:
-npx expo start --dev-client
+npx tsc --noEmit
 ```
 
-## Estados tratados na interface
+Para validar a API localmente:
 
-- Carregando (login, envio de mensagens, lista de contatos)
-- Erros de autenticação, cadastro, Google/Apple Sign-In e leitura/escrita no
-  Realtime Database
-- Usuário não autenticado (tela de login)
-- Nenhum contato disponível para conversar
-- Conversa sem mensagens
-- Falha no envio de mensagem
+```powershell
+cd app-firestore/server
+npm install
+npm run typecheck
+npm run lint
+npm run dev
+```
 
-## Prints da aplicação
-
-**Login e cadastro**
-
-| Login | Cadastro |
-|---|---|
-| ![Tela de login](screenshots/telaLogin.jpeg) | ![Tela de cadastro](screenshots/telaCadastrar.jpeg) |
-
-**Google Sign-In (nativo)**
-
-![Seletor nativo de conta do Google](screenshots/contasGoogle.jpeg)
-
-**Regra de comunicação entre provedores** — cada lado só vê o provedor compatível:
-
-| Contatos vistos por uma conta Google | Contatos vistos por uma conta e-mail/senha |
-|---|---|
-| ![Contatos de uma conta Google, mostrando só contas e-mail/senha](screenshots/logadoGoogle.jpeg) | ![Contatos de uma conta e-mail/senha, mostrando só contas Google](screenshots/logadoEmail_Senha.jpeg) |
-
-**Chat em tempo real**
-
-| Sem mensagens (estado vazio) | Com mensagens (enviada/recebida) |
-|---|---|
-| ![Chat sem mensagens](screenshots/chatSemMensagem.jpeg) | ![Chat com mensagem enviada e recebida](screenshots/chatComMensagem.jpeg) |
-
-**Dados reais no console do Firebase** — prova de que não há usuário hardcoded nem mensagem simulada:
-
-| Usuários reais no Firebase Authentication | Mensagens reais no Realtime Database |
-|---|---|
-| ![Usuários reais cadastrados no Firebase Authentication, por e-mail/senha e Google](screenshots/usuariosFireBase.jpeg) | ![Estrutura de conversations/messages persistida no Realtime Database](screenshots/mensagensNoRealtimeDatabase.jpeg) |
-
-**Apple Sign-In** — prompt nativo funcionando e erro tratado corretamente (ver [limitação documentada acima](#limitação-conhecida-apple-sign-in)):
-
-| Prompt nativo do iOS | Erro tratado (provedor não habilitado no Firebase) |
-|---|---|
-| ![Prompt nativo de Sign in with Apple](screenshots/loginApple.jpeg) | ![Erro tratado de login com Apple](screenshots/erroLoginApple.jpeg) |
+Push notifications exigem um dispositivo físico e um development build configurado para o projeto Expo. Um ticket `ok` do Expo significa que o serviço aceitou a solicitação; não confirma a entrega no dispositivo. O polling de receipts fica documentado como etapa posterior de auditoria.

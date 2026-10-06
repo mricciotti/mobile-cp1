@@ -1,17 +1,11 @@
-import { get, off, onValue, push, ref, serverTimestamp, set } from "firebase/database";
+import { off, onValue, push, ref, serverTimestamp, set } from "firebase/database";
 import { database } from "../config/firebase";
-import { ChatMessage, DirectConversation } from "../types/chat";
-import { buildConversationId } from "../utils/conversationId";
-
-interface ConversationRecord {
-    participants?: [string, string];
-    participantIds?: [string, string];
-    createdAt?: number;
-}
+import { ChatMessage, MessageTarget } from "../types/chat";
+import { notifyMessage } from "./apiService";
 
 interface MessageRecord {
+    conversationId?: string;
     senderId?: string;
-    receiverId?: string;
     text?: string;
     conversationType?: "direct" | "group";
     target?: ChatMessage["target"];
@@ -19,53 +13,45 @@ interface MessageRecord {
     createdAt?: number;
 }
 
-export async function findOrCreateConversation(uidA: string, uidB: string): Promise<DirectConversation> {
-    if (uidA === uidB) throw new Error("Não é possível conversar consigo mesmo.");
-    const conversationId = buildConversationId(uidA, uidB);
-    const conversationRef = ref(database, `conversations/${conversationId}`);
-    const snapshot = await get(conversationRef);
-
-    if (snapshot.exists()) {
-        const record = snapshot.val() as ConversationRecord;
-        const participantIds = record.participantIds ?? record.participants;
-        if (!participantIds) throw new Error("Conversa inválida.");
-        return { id: conversationId, type: "direct", participantIds, createdAt: record.createdAt ?? Date.now() };
-    }
-
-    const participants = [uidA, uidB].sort() as [string, string];
-    const createdAt = Date.now();
-
-    // participants is kept temporarily for the CP1 chat data already in RTDB.
-    await set(conversationRef, { type: "direct", participantIds: participants, participants, createdAt });
-
-    return { id: conversationId, type: "direct", participantIds: participants, createdAt };
+function isCurrentMessage(record: MessageRecord, conversationId: string): boolean {
+    const target = record.target;
+    return record.conversationId === conversationId
+        && (record.conversationType === "direct" || record.conversationType === "group")
+        && typeof record.senderId === "string"
+        && typeof record.text === "string"
+        && Array.isArray(record.mentionedUserIds)
+        && record.mentionedUserIds.every((uid) => typeof uid === "string")
+        && typeof record.createdAt === "number"
+        && (target?.type === "conversation"
+            || (target?.type === "member" && typeof target.memberId === "string"));
 }
 
 export async function sendMessage(
     conversationId: string,
     senderId: string,
-    receiverId: string,
-    text: string
-): Promise<void> {
+    text: string,
+    conversationType: "direct" | "group",
+    target: MessageTarget = { type: "conversation" },
+    mentionedUserIds: string[] = []
+): Promise<string> {
     const trimmedText = text.trim();
-
-    if (!trimmedText) {
-        return;
-    }
+    if (!trimmedText) return "";
 
     const newMessageRef = push(ref(database, `messages/${conversationId}`));
+    if (!newMessageRef.key) throw new Error("NÃ£o foi possÃ­vel criar o identificador da mensagem.");
 
     await set(newMessageRef, {
         conversationId,
-        conversationType: "direct",
+        conversationType,
         senderId,
-        target: { type: "conversation" },
-        mentionedUserIds: [],
-        // CP1 RTDB rules still expect this field during the compatibility period.
-        receiverId,
         text: trimmedText,
+        target,
+        mentionedUserIds,
         createdAt: serverTimestamp(),
     });
+
+    await notifyMessage(conversationId, newMessageRef.key);
+    return newMessageRef.key;
 }
 
 export function subscribeToMessages(
@@ -73,25 +59,24 @@ export function subscribeToMessages(
     callback: (messages: ChatMessage[]) => void
 ): () => void {
     const messagesRef = ref(database, `messages/${conversationId}`);
-
     const listener = onValue(messagesRef, (snapshot) => {
         const data = snapshot.val() as Record<string, MessageRecord> | null;
-
         if (!data) {
             callback([]);
             return;
         }
 
         const messages = Object.entries(data)
+            .filter(([, record]) => isCurrentMessage(record, conversationId))
             .map(([id, record]) => ({
                 id,
-                conversationId,
-                conversationType: record.conversationType ?? "direct",
-                senderId: record.senderId ?? "",
-                target: record.target ?? { type: "conversation" },
-                mentionedUserIds: record.mentionedUserIds ?? [],
-                text: record.text ?? "",
-                createdAt: record.createdAt ?? 0,
+                conversationId: record.conversationId as string,
+                conversationType: record.conversationType as "direct" | "group",
+                senderId: record.senderId as string,
+                target: record.target as ChatMessage["target"],
+                mentionedUserIds: record.mentionedUserIds as string[],
+                text: record.text as string,
+                createdAt: record.createdAt as number,
             }))
             .sort((a, b) => a.createdAt - b.createdAt);
 

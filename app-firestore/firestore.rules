@@ -81,6 +81,20 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['email', 'phoneNumber', 'birthDate']);
         allow delete: if false;
       }
+
+      match /devices/{deviceId} {
+        allow get, list: if signedIn() && request.auth.uid == uid;
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasAll(['expoPushToken', 'enabled', 'platform', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['expoPushToken', 'enabled', 'platform', 'updatedAt', 'disabledAt'])
+          && request.resource.data.expoPushToken is string
+          && request.resource.data.enabled is bool
+          && request.resource.data.platform is string
+          && request.resource.data.updatedAt is int
+          && (!request.resource.data.keys().hasAny(['disabledAt']) || request.resource.data.disabledAt is timestamp);
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     // Searchable projection for UsersScreen; contains public fields only.

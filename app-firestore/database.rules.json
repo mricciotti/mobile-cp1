@@ -4,12 +4,6 @@
       ".read": false,
       ".write": false
     },
-    "conversations": {
-      "$conversationId": {
-        ".read": "auth != null && (!data.exists() || data.child('participants').child('0').val() === auth.uid || data.child('participants').child('1').val() === auth.uid)",
-        ".write": "auth != null && (newData.child('participants').child('0').val() === auth.uid || newData.child('participants').child('1').val() === auth.uid)"
-      }
-    },
     "conversationMembers": {
       "$conversationId": {
         ".read": false,
@@ -18,10 +12,10 @@
     },
     "messages": {
       "$conversationId": {
-        ".read": "auth != null && (root.child('conversationMembers').child($conversationId).child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('participants').child('0').val() === auth.uid || root.child('conversations').child($conversationId).child('participants').child('1').val() === auth.uid)",
-        ".write": "auth != null && (root.child('conversationMembers').child($conversationId).child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('participants').child('0').val() === auth.uid || root.child('conversations').child($conversationId).child('participants').child('1').val() === auth.uid)",
+        ".read": "auth != null && root.child('conversationMembers').child($conversationId).child(auth.uid).val() === true",
         "$messageId": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'text', 'createdAt']) && newData.child('senderId').val() === auth.uid"
+          ".write": "auth != null && root.child('conversationMembers').child($conversationId).child(auth.uid).val() === true && (!data.exists() || data.child('senderId').val() === auth.uid)",
+          ".validate": "newData.hasChildren(['conversationId', 'conversationType', 'senderId', 'text', 'target', 'mentionedUserIds', 'createdAt']) && newData.child('conversationId').val() === $conversationId && (newData.child('conversationType').val() === 'direct' || newData.child('conversationType').val() === 'group') && newData.child('senderId').val() === auth.uid && newData.child('senderId').isString() && newData.child('text').isString() && newData.child('target').hasChild('type') && (newData.child('target').child('type').val() === 'conversation' || (newData.child('target').child('type').val() === 'member' && newData.child('target').child('memberId').isString())) && newData.child('mentionedUserIds').isList() && newData.child('createdAt').isNumber()"
         }
       }
     },

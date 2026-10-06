@@ -14,8 +14,6 @@ export type RootStackParamList = {
     Chat: {
         conversationId: string;
         conversationType: "direct" | "group";
-        /** Temporary bridge for the existing CP1 chat until conversationService is introduced. */
-        otherUserId: string;
     };
     Profile: {
         userId: string;

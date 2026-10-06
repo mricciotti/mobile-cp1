@@ -93,11 +93,15 @@ async function getDevices(userIds: string[]): Promise<Device[]> {
   return deviceGroups.flat();
 }
 
-async function claimDelivery(messageId: string, token: string): Promise<FirebaseFirestore.DocumentReference | null> {
+function deliveryKey(conversationId: string, messageId: string): string {
+  return createHash("sha256").update(`${conversationId}:${messageId}`).digest("hex");
+}
+
+async function claimDelivery(conversationId: string, messageId: string, token: string): Promise<FirebaseFirestore.DocumentReference | null> {
   const { firestore } = getAdminServices();
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const deliveryRef = firestore.collection("notificationDeliveries")
-    .doc(messageId).collection("devices").doc(tokenHash);
+    .doc(deliveryKey(conversationId, messageId)).collection("devices").doc(tokenHash);
   const claimed = await firestore.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(deliveryRef);
     const data = snapshot.data();
@@ -131,6 +135,7 @@ async function sendExpoPush(
       title,
       body,
       sound: "default",
+      channelId: "messages",
       data: {
         messageId: message.id,
         conversationId: message.conversationId,
@@ -215,7 +220,7 @@ export async function notifyMessage(
   let sent = 0;
   let skipped = 0;
   const deliveryResults = await Promise.allSettled(devices.map(async (device) => {
-    const deliveryRef = await claimDelivery(messageId, device.token);
+    const deliveryRef = await claimDelivery(conversationId, messageId, device.token);
     if (!deliveryRef) {
       skipped += 1;
       return;
@@ -241,13 +246,22 @@ export async function notifyMessage(
 
   const failed = deliveryResults.filter((result) => result.status === "rejected").length;
   if (failed > 0) throw new HttpError(502, `Push delivery failed for ${failed} device(s); retry is safe.`);
-  await firestore.collection("notificationDeliveries").doc(messageId).set({
-    conversationId,
-    senderId: requesterUid,
-    status: "complete",
-    deviceCount: devices.length,
-    updatedAt: FieldValue.serverTimestamp(),
-    createdAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+  const summaryRef = firestore.collection("notificationDeliveries").doc(deliveryKey(conversationId, messageId));
+  await firestore.runTransaction(async (transaction) => {
+    const summary = await transaction.get(summaryRef);
+    const payload = {
+      conversationId,
+      messageId,
+      senderId: requesterUid,
+      status: "complete",
+      deviceCount: devices.length,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (summary.exists) {
+      transaction.set(summaryRef, payload, { merge: true });
+    } else {
+      transaction.set(summaryRef, { ...payload, createdAt: FieldValue.serverTimestamp() });
+    }
+  });
   return { recipientCount: recipients.length, deviceCount: devices.length, sent, skipped };
 }

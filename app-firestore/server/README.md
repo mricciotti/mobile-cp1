@@ -1,4 +1,4 @@
-# Mobile CP1 API
+# Mobile CP2 API
 
 Node.js 22, TypeScript, Express, and Firebase Admin API. Set the Vercel project root to `server`; Vercel serves the exported Express app from `src/index.ts` at the domain root.
 
@@ -23,11 +23,11 @@ Notification requests contain only identifiers, for example:
 }
 ```
 
-Recipient IDs are derived from the RTDB message, the Firestore direct/group record, and the group's `notificationPolicy`. `mentionedUserIds` are checked against current group membership. The sender is always excluded. Device records are read from `users/{uid}/devices/{deviceId}` and should contain `expoPushToken` (or legacy `token`) and optionally `enabled`/`active`; disabled device records are skipped. Successful per-message/per-device sends are persisted in `notificationDeliveries/{messageId}/devices/{sha256-token}` so retries do not resend acknowledged Expo tickets. Expo tickets mean accepted by Expo, not confirmed device delivery; receipt polling is outside this API's current endpoint scope.
+Recipient IDs are derived from the RTDB message, the Firestore direct/group record, and the group's `notificationPolicy`. `mentionedUserIds` are checked against current group membership. The sender is always excluded. Device records are read from `users/{uid}/devices/{deviceId}` and contain `expoPushToken` plus `enabled`/`platform`/`updatedAt`; disabled device records are skipped. Successful per-message/per-device sends are persisted under `notificationDeliveries/{sha256(conversationId:messageId)}/devices/{sha256-token}` so retries do not resend acknowledged Expo tickets. The logical delivery key includes both conversation and message identifiers, and the summary `createdAt` is written only on first creation. An Expo ticket with status `ok` means that Expo accepted the request, not that the device received it; receipt polling is intentionally outside this API's current endpoint scope and remains a later audit enhancement.
 
 ## Configuration
 
-Copy `.env.example` to `.env` for local development. In Vercel, configure the same variables in Project Settings. Firebase Admin credentials are read only from environment variables; Application Default Credentials are used when the service account pair is omitted in a suitable hosting environment. `FIREBASE_DATABASE_URL` is required. `EXPO_ACCESS_TOKEN` is optional and is sent as a bearer token to Expo when configured.
+Copy `.env.example` to `.env` for local development. In Vercel, configure the same variables in Project Settings. Firebase Admin credentials are read only from environment variables; `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` and `FIREBASE_DATABASE_URL` are required by the current server implementation. `EXPO_ACCESS_TOKEN` is optional and is sent as a bearer token to Expo when configured.
 
 ```powershell
 npm install

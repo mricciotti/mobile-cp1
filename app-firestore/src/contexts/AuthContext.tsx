@@ -3,6 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { logout as logoutService } from "../services/authService";
 import { getOwnCompleteProfile } from "../services/userService";
+import { registerPushDevice } from "../services/pushService";
 import { PublicUser } from "../types/user";
 
 interface AuthContextValue {
@@ -47,6 +48,14 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
 
         return unsubscribe;
     }, []);
+
+    useEffect(() => {
+        if (!user) return;
+        registerPushDevice(user.uid).catch((error: unknown) => {
+            // Push is optional for authentication; a denied permission must not log the user out.
+            console.warn("Push registration unavailable", error);
+        });
+    }, [user?.uid]);
 
     const logout = useCallback(async () => {
         await logoutService();

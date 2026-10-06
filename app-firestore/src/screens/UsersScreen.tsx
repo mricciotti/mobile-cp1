@@ -4,8 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../hooks/useAuth";
 import { searchUsers } from "../services/userService";
+import { getOrCreateDirectConversation } from "../services/conversationService";
 import { RootStackParamList } from "../navigation/types";
-import { getDirectRouteParams } from "../utils/conversationId";
 import { UserItem } from "../components/UserItem";
 import { Loading } from "../components/Loading";
 import { Button } from "../components/Button";
@@ -20,6 +20,7 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
     const [contacts, setContacts] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [openingUserId, setOpeningUserId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!user) {
@@ -78,15 +79,27 @@ export function UsersScreen({ navigation }: UsersScreenProps) {
                         <View style={styles.emptyState}>
                             <Text style={styles.emptyTitle}>Nenhum contato por aqui</Text>
                             <Text style={styles.emptyText}>
-                                Não encontramos usuários com esse nome ou e-mail.
+                                Não encontramos usuários com esse nome.
                             </Text>
                         </View>
                     }
                     renderItem={({ item }) => (
                         <UserItem
                             user={item}
-                            onPress={(contact: PublicUser) => {
-                                if (contact.uid !== user.uid) navigation.navigate("Chat", getDirectRouteParams(user.uid, contact.uid));
+                            onPress={async (contact: PublicUser) => {
+                                if (contact.uid === user.uid || openingUserId) return;
+                                try {
+                                    setOpeningUserId(contact.uid);
+                                    const conversation = await getOrCreateDirectConversation(user.uid, contact.uid);
+                                    navigation.navigate("Chat", {
+                                        conversationId: conversation.id,
+                                        conversationType: "direct",
+                                    });
+                                } catch (reason) {
+                                    console.error(reason);
+                                } finally {
+                                    setOpeningUserId(null);
+                                }
                             }}
                         />
                     )}

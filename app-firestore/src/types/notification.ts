@@ -1,7 +1,7 @@
 export type DevicePlatform = "ios" | "android";
 
 export type DeviceToken = {
-    token: string;
+    expoPushToken: string;
     platform: DevicePlatform;
     enabled: boolean;
     updatedAt: number;

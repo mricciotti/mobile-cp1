@@ -2,20 +2,20 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../hooks/useAuth";
 import { RootStackParamList } from "../navigation/types";
-import { getOwnCompleteProfile } from "../services/userService";
+import { getOwnCompleteProfile, getPublicUser } from "../services/userService";
+import { getRelatedPrivateProfile } from "../services/apiService";
 import { CompleteUserProfile } from "../types/user";
 import { Avatar } from "../components/Avatar";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
 import { colors, radius, spacing } from "../theme/theme";
 
-// Third-party profiles must use apiService.getRelatedPrivateProfile once the
-// authenticated relationship-checking API route is implemented.
-
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
 export function ProfileScreen({ route, navigation }: Props) {
+    const { user: currentUser } = useAuth();
     const [profile, setProfile] = useState<CompleteUserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -23,7 +23,14 @@ export function ProfileScreen({ route, navigation }: Props) {
     useEffect(() => {
         let active = true;
         setLoading(true);
-        getOwnCompleteProfile(route.params.userId)
+        const profileRequest = route.params.userId === currentUser?.uid
+            ? getOwnCompleteProfile(route.params.userId)
+            : Promise.all([
+                getPublicUser(route.params.userId),
+                getRelatedPrivateProfile(route.params.userId),
+            ]).then(([publicProfile, privateProfile]) => publicProfile ? { ...publicProfile, ...privateProfile } : null);
+
+        profileRequest
             .then((user) => { if (active) setProfile(user); })
             .catch((reason: unknown) => {
                 console.error(reason);
@@ -31,7 +38,7 @@ export function ProfileScreen({ route, navigation }: Props) {
             })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
-    }, [route.params.userId]);
+    }, [currentUser?.uid, route.params.userId]);
 
     return (
         <SafeAreaView style={styles.container}>
