@@ -29,7 +29,7 @@ Recipient IDs are derived from the RTDB message, the Firestore direct/group reco
 
 ## Configuration
 
-Copy `.env.example` to `.env` for local development. In Vercel, configure the same variables in Project Settings. Firebase Admin credentials are read only from environment variables; `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` and `FIREBASE_DATABASE_URL` are required by the current server implementation. `EXPO_ACCESS_TOKEN` is optional and is sent as a bearer token to Expo when configured.
+Copy `.env.example` to `.env` for local development. In Vercel, configure the same variables in Project Settings. Firebase Admin credentials are read only from environment variables; `FIREBASE_SERVICE_ACCOUNT_BASE64` must contain the complete Google service-account JSON encoded as Base64, and `FIREBASE_DATABASE_URL` remains separate. `EXPO_ACCESS_TOKEN` is optional and is sent as a bearer token to Expo when configured.
 
 ```powershell
 npm install
