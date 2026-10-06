@@ -40,9 +40,9 @@ export function useChat(currentUserId: string, conversationId: string, conversat
         return () => clearTimeout(timeout);
     }, [error]);
 
-    const sendText = useCallback(async (text: string) => {
+    const sendText = useCallback(async (text: string, mentionedUserIds: string[] = []) => {
         try {
-            await sendMessage(conversationId, currentUserId, text, conversationType);
+            await sendMessage(conversationId, currentUserId, text, conversationType, { type: "conversation" }, mentionedUserIds);
         } catch (reason) {
             console.error(reason);
             setError(reason instanceof Error ? reason.message : "Não foi possível enviar a mensagem.");

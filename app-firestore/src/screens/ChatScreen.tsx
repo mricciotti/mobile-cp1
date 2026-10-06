@@ -19,6 +19,7 @@ interface ChatScreenProps {
     conversationType: "direct" | "group";
     title: string;
     photoUrl?: string;
+    mentionableUsers?: PublicUser[];
     onBack: () => void;
     onMessages: () => void;
     onContacts: () => void;
@@ -27,7 +28,7 @@ interface ChatScreenProps {
     onLogout: () => void;
 }
 
-export function ChatScreen({ currentUser, conversationId, conversationType, title, photoUrl, onBack, onMessages, onContacts, onNewGroup, onProfile, onLogout }: ChatScreenProps) {
+export function ChatScreen({ currentUser, conversationId, conversationType, title, photoUrl, mentionableUsers, onBack, onMessages, onContacts, onNewGroup, onProfile, onLogout }: ChatScreenProps) {
     const { messages, loading, error, sendText } = useChat(currentUser.uid, conversationId, conversationType);
     const listRef = useRef<FlatList<ChatMessage>>(null);
 
@@ -81,7 +82,7 @@ export function ChatScreen({ currentUser, conversationId, conversationType, titl
                         renderItem={({ item }) => <ChatMessageComponent message={item} isOwnMessage={item.senderId === currentUser.uid} />}
                     />
                 )}
-                <ChatInput onSend={sendText} disabled={loading} />
+                <ChatInput currentUserId={currentUser.uid} mentionableUsers={conversationType === "group" ? mentionableUsers : []} onSend={sendText} disabled={loading} />
             </KeyboardAvoidingView>
         </SafeAreaView>
         </AppShell>

@@ -19,6 +19,7 @@ import { ConversationsScreen } from "../screens/ConversationsScreen";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
 import { RootStackParamList } from "./types";
+import { PublicUser } from "../types/user";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -29,6 +30,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
     const { user, logout } = useAuth();
     const [title, setTitle] = useState("");
     const [photoUrl, setPhotoUrl] = useState("");
+    const [mentionableUsers, setMentionableUsers] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +40,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
         setError(null);
         setTitle("");
         setPhotoUrl("");
+        setMentionableUsers([]);
 
         const loadConversationHeader = async () => {
             if (!user) return;
@@ -53,10 +56,14 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
                 }
             } else {
                 const group = await getGroup(route.params.conversationId);
+                const profiles = group
+                    ? await Promise.all(group.memberIds.filter((memberId) => memberId !== user.uid).map((memberId) => getPublicUser(memberId)))
+                    : [];
                 if (!group || !group.memberIds.includes(user.uid)) throw new Error("Grupo indisponÃ­vel.");
                 if (active) {
                     setTitle(group.name);
                     setPhotoUrl(group.photoUrl);
+                    setMentionableUsers(profiles.flatMap((profile) => profile ? [profile] : []));
                 }
             }
         };
@@ -84,6 +91,7 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
             conversationType={route.params.conversationType}
             title={title}
             photoUrl={photoUrl}
+            mentionableUsers={mentionableUsers}
             onBack={() => navigation.goBack()}
             onMessages={() => navigation.navigate("Conversations")}
             onContacts={() => navigation.navigate("Users", { mode: "direct" })}
