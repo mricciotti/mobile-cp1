@@ -26,7 +26,7 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 type ChatRouteProps = NativeStackScreenProps<RootStackParamList, "Chat">;
 
 function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [title, setTitle] = useState("");
     const [photoUrl, setPhotoUrl] = useState("");
     const [loading, setLoading] = useState(true);
@@ -85,6 +85,11 @@ function ChatRouteScreen({ route, navigation }: ChatRouteProps) {
             title={title}
             photoUrl={photoUrl}
             onBack={() => navigation.goBack()}
+            onMessages={() => navigation.navigate("Conversations")}
+            onContacts={() => navigation.navigate("Users", { mode: "direct" })}
+            onNewGroup={() => navigation.navigate("GroupForm", {})}
+            onProfile={() => navigation.navigate("Profile", { userId: user.uid })}
+            onLogout={logout}
         />
     );
 }

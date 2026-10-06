@@ -11,6 +11,7 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { Avatar } from "../components/Avatar";
 import { colors, radius, spacing } from "../theme/theme";
 import { formatBirthDateInput, isValidBirthDate } from "../utils/dateValidation";
+import { formatPhoneNumber, normalizePhoneNumber } from "../utils/phoneFormat";
 import { pickImage, uploadImage } from "../services/imageService";
 import { registerWithEmail } from "../services/authService";
 
@@ -45,12 +46,13 @@ export function RegisterScreen({ navigation }: Props) {
         if (password.length < 6) { setError("A senha deve possuir pelo menos 6 caracteres."); return; }
         if (password !== confirmPassword) { setError("As senhas não coincidem."); return; }
         if (!isValidBirthDate(birthDate)) { setError("Informe uma data válida no formato DD/MM/AAAA."); return; }
+        if (![10, 11].includes(normalizePhoneNumber(phoneNumber).length)) { setError("Informe um celular valido com DDD."); return; }
         if (!photo) { setError("Selecione uma foto de perfil."); return; }
 
         try {
             setLoading(true);
             const photoUrl = await uploadImage(photo);
-            await registerWithEmail({ name: name.trim(), email: email.trim(), password, phoneNumber: phoneNumber.trim(), birthDate, photoUrl });
+            await registerWithEmail({ name: name.trim(), email: email.trim(), password, phoneNumber: normalizePhoneNumber(phoneNumber), birthDate, photoUrl });
         } catch (reason) {
             console.error(reason);
             if (reason instanceof FirebaseError) {
@@ -81,7 +83,7 @@ export function RegisterScreen({ navigation }: Props) {
                     <TextField label="E-mail" placeholder="voce@email.com" value={email} onChangeText={setEmail} editable={!loading} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" />
                     <TextField label="Senha" placeholder="Mínimo de 6 caracteres" value={password} onChangeText={setPassword} editable={!loading} secureTextEntry autoCapitalize="none" />
                     <TextField label="Confirmar senha" placeholder="Digite a senha novamente" value={confirmPassword} onChangeText={setConfirmPassword} editable={!loading} secureTextEntry autoCapitalize="none" />
-                    <TextField label="Celular" placeholder="(11) 99999-9999" value={phoneNumber} onChangeText={setPhoneNumber} editable={!loading} keyboardType="phone-pad" />
+                    <TextField label="Celular" placeholder="(11) 99999-9999" value={phoneNumber} onChangeText={(value) => setPhoneNumber(formatPhoneNumber(value))} editable={!loading} keyboardType="phone-pad" maxLength={15} />
                     <TextField label="Data de nascimento" placeholder="DD/MM/AAAA" value={birthDate} onChangeText={(value) => setBirthDate(formatBirthDateInput(value))} editable={!loading} keyboardType="number-pad" maxLength={10} />
                     <Button title="Cadastrar" onPress={submit} loading={loading} disabled={loading} />
                 </ScrollView>

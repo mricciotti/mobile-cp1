@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,6 +11,7 @@ import { Button } from "../components/Button";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
 import { colors, glow, radius, spacing } from "../theme/theme";
+import { AppShell } from "../components/AppShell";
 
 function formatConversationTime(timestamp: number): string {
     if (!timestamp) return "";
@@ -48,8 +49,17 @@ export function ConversationsScreen({ navigation }: Props) {
     if (!user) return null;
 
     return (
+        <AppShell
+            user={user}
+            activeSection="messages"
+            onMessages={() => navigation.navigate("Conversations")}
+            onContacts={() => navigation.navigate("Users", { mode: "direct" })}
+            onNewGroup={() => navigation.navigate("GroupForm", {})}
+            onProfile={() => navigation.navigate("Profile", { userId: user.uid })}
+            onLogout={logout}
+        >
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
+            {Platform.OS !== "web" ? <View style={styles.header}>
                 <View style={styles.identity}>
                     <Avatar photoUrl={user.photoUrl} name={user.name} size={44} />
                     <View style={styles.identityText}>
@@ -61,7 +71,7 @@ export function ConversationsScreen({ navigation }: Props) {
                     <Button title="Perfil" variant="ghost" onPress={() => navigation.navigate("Profile", { userId: user.uid })} style={styles.actionButton} />
                     <Button title="Sair" variant="ghost" onPress={logout} style={styles.actionButton} />
                 </View>
-            </View>
+            </View> : null}
 
             <View style={styles.titleRow}>
                 <Text style={styles.title}>Mensagens</Text>
@@ -104,6 +114,11 @@ export function ConversationsScreen({ navigation }: Props) {
                                 </View>
                                 <View style={styles.rowMeta}>
                                     <Text style={styles.time}>{formatConversationTime(item.lastMessageAt || item.createdAt)}</Text>
+                                    {item.type === "direct" ? (
+                                        <Pressable onPress={(event) => { event.stopPropagation(); navigation.navigate("Profile", { userId: item.otherParticipantId }); }}>
+                                            <Text style={styles.profileLink}>Perfil</Text>
+                                        </Pressable>
+                                    ) : null}
                                     {item.isUnread ? <View style={styles.unreadBadge}><Text style={styles.unreadBadgeText}>1</Text></View> : null}
                                 </View>
                             </Pressable>
@@ -116,6 +131,7 @@ export function ConversationsScreen({ navigation }: Props) {
                 />
             )}
         </SafeAreaView>
+        </AppShell>
     );
 }
 
@@ -148,6 +164,7 @@ const styles = StyleSheet.create({
     unreadSubtitle: { color: colors.text },
     rowMeta: { alignItems: "flex-end", justifyContent: "center", gap: spacing.xs },
     time: { color: colors.textFaint, fontSize: 10 },
+    profileLink: { color: colors.primary, fontSize: 10, fontWeight: "800" },
     unreadBadge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary },
     unreadBadgeText: { color: colors.background, fontSize: 11, fontWeight: "800" },
 });

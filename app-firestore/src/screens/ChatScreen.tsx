@@ -11,6 +11,7 @@ import { colors, radius, spacing } from "../theme/theme";
 import { PublicUser } from "../types/user";
 import { ChatMessage } from "../types/chat";
 import { markConversationRead } from "../services/userService";
+import { AppShell } from "../components/AppShell";
 
 interface ChatScreenProps {
     currentUser: PublicUser;
@@ -19,9 +20,14 @@ interface ChatScreenProps {
     title: string;
     photoUrl?: string;
     onBack: () => void;
+    onMessages: () => void;
+    onContacts: () => void;
+    onNewGroup: () => void;
+    onProfile: () => void;
+    onLogout: () => void;
 }
 
-export function ChatScreen({ currentUser, conversationId, conversationType, title, photoUrl, onBack }: ChatScreenProps) {
+export function ChatScreen({ currentUser, conversationId, conversationType, title, photoUrl, onBack, onMessages, onContacts, onNewGroup, onProfile, onLogout }: ChatScreenProps) {
     const { messages, loading, error, sendText } = useChat(currentUser.uid, conversationId, conversationType);
     const listRef = useRef<FlatList<ChatMessage>>(null);
 
@@ -32,6 +38,15 @@ export function ChatScreen({ currentUser, conversationId, conversationType, titl
     }, [currentUser.uid, conversationId, messages.length]);
 
     return (
+        <AppShell
+            user={currentUser}
+            activeSection="messages"
+            onMessages={onMessages}
+            onContacts={onContacts}
+            onNewGroup={onNewGroup}
+            onProfile={onProfile}
+            onLogout={onLogout}
+        >
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
                 <View style={styles.header}>
@@ -69,6 +84,7 @@ export function ChatScreen({ currentUser, conversationId, conversationType, titl
                 <ChatInput onSend={sendText} disabled={loading} />
             </KeyboardAvoidingView>
         </SafeAreaView>
+        </AppShell>
     );
 }
 

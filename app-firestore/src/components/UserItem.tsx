@@ -6,22 +6,23 @@ import { Avatar } from "./Avatar";
 interface UserItemProps {
     user: PublicUser;
     onPress: (user: PublicUser) => void;
+    onViewProfile: (user: PublicUser) => void;
 }
 
-export function UserItem({ user, onPress }: UserItemProps) {
+export function UserItem({ user, onPress, onViewProfile }: UserItemProps) {
     return (
-        <Pressable
-            onPress={() => onPress(user)}
-            style={({ pressed }) => [styles.container, pressed && styles.pressed]}
-        >
-            <Avatar photoUrl={user.photoUrl} name={user.name} size={46} />
-
-            <View style={styles.info}>
-                <Text style={styles.name}>{user.name}</Text>
-            </View>
-
-            <Text style={styles.chevron}>›</Text>
-        </Pressable>
+        <View style={styles.container}>
+            <Pressable onPress={() => onViewProfile(user)} style={({ pressed }) => [styles.profileTarget, pressed && styles.pressed]}>
+                <Avatar photoUrl={user.photoUrl} name={user.name} size={46} />
+                <View style={styles.info}>
+                    <Text style={styles.name} numberOfLines={1}>{user.name}</Text>
+                    <Text style={styles.profileHint}>Ver perfil</Text>
+                </View>
+            </Pressable>
+            <Pressable onPress={() => onPress(user)} style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}>
+                <Text style={styles.startButtonText}>Conversar</Text>
+            </Pressable>
+        </View>
     );
 }
 
@@ -29,7 +30,7 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         alignItems: "center",
-        gap: spacing.md,
+        gap: spacing.sm,
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.border,
@@ -37,22 +38,39 @@ const styles = StyleSheet.create({
         padding: spacing.md,
         ...glow.card,
     },
+    profileTarget: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.md,
+        minWidth: 0,
+    },
     pressed: {
         opacity: 0.75,
-        borderColor: colors.borderStrong,
     },
     info: {
         flex: 1,
-        gap: 6,
+        gap: 4,
+        minWidth: 0,
     },
     name: {
         fontSize: 17,
         fontWeight: "700",
         color: colors.text,
     },
-    chevron: {
-        fontSize: 22,
+    profileHint: {
         color: colors.textFaint,
-        fontWeight: "300",
+        fontSize: 12,
+    },
+    startButton: {
+        borderRadius: radius.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        backgroundColor: colors.primary,
+    },
+    startButtonText: {
+        color: colors.background,
+        fontSize: 12,
+        fontWeight: "800",
     },
 });

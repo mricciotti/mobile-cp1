@@ -15,6 +15,7 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { Loading } from "../components/Loading";
 import { TextField } from "../components/TextField";
 import { colors, radius, spacing } from "../theme/theme";
+import { AppShell } from "../components/AppShell";
 
 type Props = NativeStackScreenProps<RootStackParamList, "GroupForm">;
 
@@ -26,7 +27,7 @@ const policyOptions: Array<{ value: NotificationPolicy; label: string }> = [
 ];
 
 export function GroupFormScreen({ route, navigation }: Props) {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const editing = Boolean(route.params?.groupId);
     const [group, setGroup] = useState<ChatGroup | null>(null);
     const [users, setUsers] = useState<PublicUser[]>([]);
@@ -122,6 +123,15 @@ export function GroupFormScreen({ route, navigation }: Props) {
     if (loading) return <Loading />;
 
     return (
+        <AppShell
+            user={user}
+            activeSection="groups"
+            onMessages={() => navigation.navigate("Conversations")}
+            onContacts={() => navigation.navigate("Users", { mode: "direct" })}
+            onNewGroup={() => navigation.navigate("GroupForm", {})}
+            onProfile={() => navigation.navigate("Profile", { userId: user.uid })}
+            onLogout={logout}
+        >
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 <Pressable onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Voltar</Text></Pressable>
@@ -162,6 +172,7 @@ export function GroupFormScreen({ route, navigation }: Props) {
                 <Button title={editing ? "Salvar alterações" : "Criar grupo"} onPress={submit} loading={saving} disabled={saving} />
             </ScrollView>
         </SafeAreaView>
+        </AppShell>
     );
 }
 

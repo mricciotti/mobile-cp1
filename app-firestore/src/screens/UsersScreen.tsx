@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../hooks/useAuth";
@@ -13,6 +13,7 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { colors, radius, spacing } from "../theme/theme";
 import { PublicUser } from "../types/user";
 import { Avatar } from "../components/Avatar";
+import { AppShell } from "../components/AppShell";
 
 type UsersScreenProps = NativeStackScreenProps<RootStackParamList, "Users">;
 
@@ -58,8 +59,17 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
     }
 
     return (
+        <AppShell
+            user={user}
+            activeSection="contacts"
+            onMessages={() => navigation.navigate("Conversations")}
+            onContacts={() => navigation.navigate("Users", { mode: "direct" })}
+            onNewGroup={() => navigation.navigate("GroupForm", {})}
+            onProfile={() => navigation.navigate("Profile", { userId: user.uid })}
+            onLogout={logout}
+        >
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
+            {Platform.OS !== "web" ? <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <Avatar photoUrl={user.photoUrl} name={user.name} size={44} />
                         <View style={styles.headerIdentityText}>
@@ -71,10 +81,10 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
                     <Button title="Perfil" variant="ghost" onPress={() => navigation.navigate("Profile", { userId: user.uid })} style={styles.profileButton} />
                     <Button title="Sair" variant="ghost" onPress={logout} style={styles.logoutButton} />
                 </View>
-            </View>
+            </View> : null}
 
             <Text style={styles.sectionTitle}>Contatos</Text>
-            <View style={styles.navigationActions}>
+            {Platform.OS !== "web" ? <View style={styles.navigationActions}>
                 <Button
                     title="Mensagens"
                     variant="ghost"
@@ -87,7 +97,7 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
                     onPress={() => navigation.navigate("GroupForm", {})}
                     style={styles.groupButton}
                 />
-            </View>
+            </View> : null}
             <TextInput
                 value={search}
                 onChangeText={setSearch}
@@ -116,6 +126,7 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
                     renderItem={({ item }) => (
                         <UserItem
                             user={item}
+                            onViewProfile={(contact) => navigation.navigate("Profile", { userId: contact.uid })}
                             onPress={async (contact: PublicUser) => {
                                 if (contact.uid === user.uid || openingUserId) return;
                                 try {
@@ -138,6 +149,7 @@ export function UsersScreen({ navigation, route }: UsersScreenProps) {
                 />
             )}
         </SafeAreaView>
+        </AppShell>
     );
 }
 
